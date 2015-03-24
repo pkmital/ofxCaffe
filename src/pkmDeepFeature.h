@@ -27,10 +27,10 @@ public:
         feature_prob.setTranspose();
     }
     
-    void draw()
+    void draw(int w = 1240, int h = 300)
     {
-        caffe->drawGraph(feature_fc5, "conv5", 20, 0, 1240, 300, 255.0f);
-        caffe->drawGraph(feature_prob, "prob", 20, 40, 1240, 300, 1.0f);
+        caffe->drawGraph(feature_fc5, "conv5", 20, 0, w, h, 255.0f);
+        caffe->drawGraph(feature_prob, "prob", 20, 40, w, h, 1.0f);
     }
     
     pkm::Mat& getFeatureFC5()

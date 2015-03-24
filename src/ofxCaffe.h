@@ -50,7 +50,7 @@
 using namespace caffe;
 using namespace std;
 
-#define WITH_OFXCAFFE_LSTM
+//#define WITH_OFXCAFFE_LSTM
 
 #ifdef WITH_OFXCAFFE_LSTM
 
@@ -58,6 +58,7 @@ class ofxCaffeLSTM
 {
 public:
     typedef enum {
+        OFXCAFFE_LSTM_MODEL_TEXT_LSTM,
         OFXCAFFE_LSTM_MODEL_DEEP_LONG,
         OFXCAFFE_LSTM_MODEL_DEEP_SHORT,
         OFXCAFFE_LSTM_MODEL_SHALLOW_LONG,
@@ -92,6 +93,7 @@ public:
     static vector<ofxCaffeLSTM::OFXCAFFE_LSTM_MODEL_TYPE> getModelTypes()
     {
         vector<ofxCaffeLSTM::OFXCAFFE_LSTM_MODEL_TYPE> d;
+        d.push_back(OFXCAFFE_LSTM_MODEL_TEXT_LSTM);
         d.push_back(OFXCAFFE_LSTM_MODEL_DEEP_LONG);
         d.push_back(OFXCAFFE_LSTM_MODEL_DEEP_SHORT);
         d.push_back(OFXCAFFE_LSTM_MODEL_SHALLOW_LONG);
@@ -102,6 +104,7 @@ public:
     static vector<string> getModelTypeNames()
     {
         vector<string> d;
+        d.push_back("LSTM Text");
         d.push_back("LSTM Deep Long");
         d.push_back("LSTM Deep Short");
         d.push_back("LSTM Shallow Long");
@@ -133,7 +136,12 @@ public:
     {
         this->model = model;
         string net_solver;
-        if (model == OFXCAFFE_LSTM_MODEL_DEEP_LONG)
+        
+        if (model == OFXCAFFE_LSTM_MODEL_TEXT_LSTM)
+        {
+            net_solver = string("../../../../../addons/ofxCaffe/models/text_lstm.prototxt");
+        }
+        else if (model == OFXCAFFE_LSTM_MODEL_DEEP_LONG)
         {
             net_solver = string("../../../../../addons/ofxCaffe/models/deep_lstm_long_solver.prototxt");
         }
@@ -171,7 +179,10 @@ public:
         
     }
 
-    void setTrainingData(vector<pkm::Mat> training_data, vector<pkm::Mat> training_labels)
+    void setTrainingData(vector<pkm::Mat> training_data,
+                         vector<pkm::Mat> training_labels,
+                         bool b_subtract_mean_data = false,
+                         bool b_subtract_mean_label = false)
     {
         if(training_data.size() == 0)
             return;
@@ -182,42 +193,60 @@ public:
         sequence_length = training_data[0].rows;
         num_input_channels = training_data[0].cols;
         num_label_channels = training_labels[0].cols;
+        int num_batches_per_sequence = sequence_length / batch_size;
+        
+        cout << "training_data size: " << training_data.size() << endl;
+        cout << "training_label size: " << training_labels.size() << endl;
+        cout << "batch_size: " << batch_size << ", sequence_length: " << sequence_length << ", num_batches_per_sequence_per_sequence: " << num_batches_per_sequence << endl;
         
         // create batches using each training example in succession... could probably
         // create batches using multiple examples within a batch, rather than just
         // data from one example in a batch...
-        for (int i = 0; i < training_data.size(); ++i) {
-            pkm::Mat mean_label = training_labels[i].mean();
+        for (int train_ex_i = 0; train_ex_i < training_data.size(); ++train_ex_i)
+        {
+            pkm::Mat mean_data = training_data[train_ex_i].mean();
+            pkm::Mat mean_label = training_labels[train_ex_i].mean();
 //            training_labels[i].zNormalizeEachCol();
 //            cout << "training data " << i << ":" << endl;
 //            training_data[i].print();
 //            cout << "training labels " << i << ":" << endl;
 //            training_labels[i].print();
             
-            vector<Datum> d;
-            vector<vector<float> > l;
-
-            for (int j = 0; j < batch_size; ++j) {
-                Datum datum;
-                datum.set_channels(num_input_channels);
-                datum.set_width(1);
-                datum.set_height(1);
-//                if(b_use_float_data)
-                    for (int k = 0; k < num_input_channels; k++)
-                        datum.add_float_data(training_data[i].row(j)[k]);
-//                else
-//                    for (int k = 0; k < num_input_channels; k++)
-//                        datum.set_data(training_data[i].row(j)[k]);
+            // split sequence up into batches
+            for(int batch_i = 0; batch_i < num_batches_per_sequence; ++batch_i)
+            {
                 
-                d.push_back(datum);
-                vector<float> tmp;
-                for (int k = 0; k < num_label_channels; k++)
-                    tmp.push_back(training_labels[i].row(j)[k] - mean_label[k]);
-                l.push_back(tmp);
-            }
+                vector<Datum> d;
+                vector<vector<float> > l;
+                
+                for (int idx_i = 0; idx_i < batch_size; ++idx_i) {
+                    Datum datum;
+                    datum.set_channels(num_input_channels);
+                    datum.set_width(1);
+                    datum.set_height(1);
+                    for (int ch_i = 0; ch_i < num_input_channels; ch_i++)
+                    {
+                        if(b_subtract_mean_data)
+                            datum.add_float_data(training_data[train_ex_i].row(batch_i*batch_size + idx_i)[ch_i] - mean_data[ch_i]);
+                        else
+                            datum.add_float_data(training_data[train_ex_i].row(batch_i*batch_size + idx_i)[ch_i]);
+                    }
+                    d.push_back(datum);
+                    
+                    vector<float> tmp;
+                    for (int ch_i = 0; ch_i < num_label_channels; ch_i++)
+                    {
+                        if(b_subtract_mean_label)
+                            tmp.push_back(training_labels[train_ex_i].row(batch_i*batch_size + idx_i)[ch_i] - mean_label[ch_i]);
+                        else
+                            tmp.push_back(training_labels[train_ex_i].row(batch_i*batch_size + idx_i)[ch_i]);
+                    }
+                    l.push_back(tmp);
+                }
 
-            batch_data.push_back(d);
-            batch_labels.push_back(l);
+                batch_data.push_back(d);
+                batch_labels.push_back(l);
+            }
         }
         
         b_set_training_data = true;
@@ -235,12 +264,16 @@ public:
         if (b_set_training_data)
         {
             int batch_idx = iter % batch_labels.size();
-//            cout << "batch idx: " << batch_idx <<  " / " << batch_labels.size() << endl;
             
             vector<Datum>& batch_d = batch_data[batch_idx];
             vector<vector< float> >& batch_l = batch_labels[batch_idx];
             
-            ((SeqMemoryDataLayer<float>*)layers[0].get())->DataFetch(batch_d, batch_l, true);
+//            cout << "batch idx: " << batch_idx <<  " / " << batch_labels.size() << endl;
+//            cout << "batch data size: " << batch_d.size() << endl;
+//            cout << "batch labels size: " << batch_l.size() << endl;
+            
+            
+            ((SeqMemoryDataLayer<float>*)layers[0].get())->DataFetch(batch_d, batch_l, (batch_idx % batch_size) == 0);
             solver->SolveIter(smoothed_loss, losses);
             
             iter++;
@@ -380,11 +413,11 @@ public:
     
     ~ofxCaffe()
     {
-        if(b_allocated)
-            delete net;
-        
-        for(int i = 0; i < layer1_imgs.size(); i++)
-            delete layer1_imgs[i];
+//        if(b_allocated)
+//            delete net;
+//        
+//        for(int i = 0; i < layer1_imgs.size(); i++)
+//            delete layer1_imgs[i];
     }
     
     static vector<ofxCaffe::OFXCAFFE_MODEL_TYPE> getModelTypes()
@@ -426,42 +459,42 @@ public:
         
         // Load pre-trained net (binary proto) and associated labels
         if (model == OFXCAFFE_MODEL_VGG_16) {
-            net = new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/vgg-16.txt", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/vgg-16.txt", true)));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/VGG_ILSVRC_16_layers.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_VGG_19) {
-            net = new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/vgg-19.txt", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/vgg-19.txt", true)));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/VGG_ILSVRC_19_layers.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_HYBRID) {
-            net = new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/hybridCNN_deploy.prototxt", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/hybridCNN_deploy.prototxt", true)));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/hybridCNN_iter_700000.caffemodel", true));
             loadHybridLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET_8x8) {
-            net = new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/8x8-alexnet.txt", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/8x8-alexnet.txt", true)));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_caffenet_full_conv.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET_34x17) {
-            net = new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/34x17-alexnet.txt", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/34x17-alexnet.txt", true)));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_caffenet_full_conv.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET) {
-            net = new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_caffenet.txt", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_caffenet.txt", true)));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_caffenet.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_GOOGLENET) {
-            net = new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.txt", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.txt", true)));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_RCNN_ILSVRC2013) {
-            net = new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_rcnn_ilsvrc13.txt", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_rcnn_ilsvrc13.txt", true)));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_rcnn_ilsvrc13.caffemodel", true));
             loadILSVRC2013();
         }
@@ -621,7 +654,7 @@ public:
             result_mat = pkm::Mat(result[0]->channels(), result[0]->height()*result[0]->width(), result[0]->cpu_data());
             result_mat.max(max, max_i);
             
-            LOG(ERROR) << result[0]->num() << "x" <<  result[0]->channels() << "x" << result[0]->width() << "x" <<  result[0]->height() << " - max: " << max << " i " << max_i << " label: " << labels[max_i];
+//            LOG(ERROR) << result[0]->num() << "x" <<  result[0]->channels() << "x" << result[0]->width() << "x" <<  result[0]->height() << " - max: " << max << " i " << max_i << " label: " << labels[max_i];
         }
         // or for dense architecture, many labels that can be summed/averaged/etc...
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET_8x8 ||
@@ -645,7 +678,7 @@ public:
             d.copyTo(d2);
             dense_grid.flagImageChanged();
             
-            LOG(ERROR) << result[0]->width() << "x" <<  result[0]->height() << " - max: " << max << " i " << max_i << " label: " << labels[max_i];
+//            LOG(ERROR) << result[0]->width() << "x" <<  result[0]->height() << " - max: " << max << " i " << max_i << " label: " << labels[max_i];
         }
         else
         {
@@ -688,7 +721,8 @@ public:
                           size_t py = 60,
                           size_t width = 1280,
                           size_t images_per_row = 32,
-                          size_t layer_num = 0)
+                          size_t layer_num = 0,
+                          size_t channel_offset = 0)
     {
         boost::shared_ptr<Blob<float> > layer1 = net->params()[layer_num];
         string layer_name = net->layer_names()[layer_num];
@@ -699,7 +733,7 @@ public:
         
         while(layer1_imgs.size() < layer1->num())
         {
-            ofxCvColorImage *img = new ofxCvColorImage();
+            std::shared_ptr<ofxCvColorImage> img(new ofxCvColorImage());
             img->allocate(layer1->width(), layer1->height());
             layer1_imgs.push_back(img);
         }
@@ -707,10 +741,15 @@ public:
         // go from Caffe's layout to many images in opencv
         // number N x channel K x height H x width W. Blob memory is row-major in layout so the last / rightmost dimension changes fastest. For example, the value at index (n, k, h, w) is physically located at index ((n * K + k) * H + h) * W + w.
         const float *fp_from = layer1->cpu_data();
+        
+        channel_offset = channel_offset % layer1->channels();
+        if(layer1->channels() <= 3)
+            channel_offset = 0;
+            
         const size_t max_channels = std::min<int>(layer1->channels(), 3);
         for(size_t n = 0; n < layer1->num(); n++)
         {
-            ofxCvColorImage *img = layer1_imgs[n];
+            std::shared_ptr<ofxCvColorImage> img = layer1_imgs[n];
             if(img->getWidth() != layer1->width() ||
                img->getHeight() != layer1->height())
                 img->allocate(layer1->width(), layer1->height());
@@ -724,7 +763,7 @@ public:
                 {
                     for(size_t h = 0; h < layer1->height(); h++)
                     {
-                        fp_to[h * widthStep + 3 * w + c] = fp_from[ ((n * layer1->channels() + c) * layer1->height() + h) * layer1->width() + w ] * 255.0 + + 128.0;
+                        fp_to[h * widthStep + 3 * w + c] = fp_from[ ((n * layer1->channels() + ((c + channel_offset) % layer1->channels())) * layer1->height() + h) * layer1->width() + w ] * 255.0 + + 128.0;
                     }
                 }
             }
@@ -738,6 +777,121 @@ public:
             img->draw(px + nx * drawwidth + nx * padding + padding,
                       py + ny * drawheight + ny * padding + padding + 20,
                       drawwidth, drawheight);
+        }
+        
+        ofDrawBitmapStringHighlight("layer: " + layer_name + " " + oss.str() + " (channels " + ofToString(channel_offset) + "-" + ofToString(channel_offset + max_channels) + " are visualized as RGB)", px + 20, py + 10);
+    }
+    
+    
+    void drawLayerXParamsReduced(size_t px = 0,
+                                 size_t py = 60,
+                                 size_t width = 1280,
+                                 size_t images_per_row = 32,
+                                 size_t layer_num = 0)
+    {
+        boost::shared_ptr<Blob<float> > layer1 = net->params()[layer_num];
+        string layer_name = net->layer_names()[layer_num];
+        
+        ostringstream oss;
+        oss << layer1->num() << "x" << layer1->channels() << "x" << layer1->height() << "x" << layer1->width();
+        cout << oss.str() << endl;
+        
+        while(layer1_weight_mean_imgs.size() < layer1->num())
+        {
+            std::shared_ptr<ofxCvGrayscaleImage> img(new ofxCvGrayscaleImage());
+            img->allocate(layer1->width(), layer1->height());
+            layer1_weight_mean_imgs.push_back(img);
+            
+            std::shared_ptr<ofxCvGrayscaleImage> img2(new ofxCvGrayscaleImage());
+            img2->allocate(layer1->width(), layer1->height());
+            layer1_weight_std_imgs.push_back(img2);
+        }
+        
+        // go from Caffe's layout to many images in opencv
+        // number N x channel K x height H x width W. Blob memory is row-major in layout so the last / rightmost dimension changes fastest. For example, the value at index (n, k, h, w) is physically located at index ((n * K + k) * H + h) * W + w.
+        const float *fp_from = layer1->cpu_data();
+        const size_t max_channels = std::min<int>(layer1->channels(), 3);
+        layer1_means.resize(layer1->num());
+        layer1_covs.resize(layer1->num());
+        for(size_t n = 0; n < layer1->num(); n++)
+        {
+            layer1_means[n].reset(layer1->height(), layer1->width(), 0.0f);
+            layer1_covs[n].reset(layer1->height(), layer1->width(), 0.0f);
+            
+            std::shared_ptr<ofxCvGrayscaleImage> img = layer1_weight_mean_imgs[n];
+            if(img->getWidth() != layer1->width() ||
+               img->getHeight() != layer1->height())
+            img->allocate(layer1->width(), layer1->height());
+            
+            
+            std::shared_ptr<ofxCvGrayscaleImage> img2 = layer1_weight_std_imgs[n];
+            if(img2->getWidth() != layer1->width() ||
+               img2->getHeight() != layer1->height())
+            img2->allocate(layer1->width(), layer1->height());
+            
+            unsigned char *fp_to = (unsigned char *)img->getCvImage()->imageData;
+            unsigned char *fp_to2 = (unsigned char *)img2->getCvImage()->imageData;
+            
+            int widthStep = img->getCvImage()->widthStep;
+            
+            for(size_t c = 0; c < layer1->channels(); c++)
+            {
+                for(size_t w = 0; w < layer1->width(); w++)
+                {
+                    for(size_t h = 0; h < layer1->height(); h++)
+                    {
+                        double val = (fp_from[ ((n * layer1->channels() + c) * layer1->height() + h) * layer1->width() + w ]);
+                        layer1_means[n].row(h)[w] += val;
+                        layer1_covs[n].row(h)[w] += (val * val);
+                    }
+                }
+            }
+            
+            for(size_t w = 0; w < layer1->width(); w++)
+            {
+                for(size_t h = 0; h < layer1->height(); h++)
+                {
+                    double mean_val = layer1_means[n].row(h)[w] / layer1->channels();
+                    double std_val = sqrt(layer1_covs[n].row(h)[w] / layer1->channels() - mean_val * mean_val);
+                    
+                    layer1_means[n].row(h)[w] = mean_val;
+                    layer1_covs[n].row(h)[w] = std_val;
+                }
+            }
+            
+            
+            layer1_means[n].zNormalize();
+            layer1_covs[n].zNormalize();
+            
+            for(size_t w = 0; w < layer1->width(); w++)
+            {
+                for(size_t h = 0; h < layer1->height(); h++)
+                {
+                    double mean_val = layer1_means[n].row(h)[w] * 32.0 + 128.0;
+                    double std_val = layer1_covs[n].row(h)[w] * 32.0 + 128.0;
+                    fp_to[h * widthStep + w] = mean_val;
+                    fp_to2[h * widthStep + w] = std_val;
+                }
+            }
+            
+            img->flagImageChanged();
+            img2->flagImageChanged();
+            
+            int nx = n % images_per_row;
+            int ny = n / images_per_row;
+            int padding = 1;
+            int drawwidth = (width - padding * images_per_row) / (float)images_per_row;
+            int drawheight = drawwidth;
+            
+            img->draw(px + nx * drawwidth + nx * padding + padding,
+                      py + ny * drawheight + ny * padding + padding + 20,
+                      drawwidth, drawheight);
+            
+            
+            img2->draw(px + nx * drawwidth + nx * padding + padding,
+                      (py + ny * drawheight + ny * padding + padding + 20) + ((layer1->num() / images_per_row) * (padding + drawheight)),
+                      drawwidth, drawheight);
+            
         }
         
         ofDrawBitmapStringHighlight("layer: " + layer_name + " " + oss.str() + " (only the first 3 channels are visualized as RGB)", px + 20, py + 10);
@@ -763,7 +917,7 @@ public:
         
         while(layer1_output_imgs.size() < layer1->channels())
         {
-            ofxCvGrayscaleImage *img = new ofxCvGrayscaleImage();
+            std::shared_ptr<ofxCvGrayscaleImage> img(new ofxCvGrayscaleImage());
             img->allocate(layer1->width(), layer1->height());
             layer1_output_imgs.push_back(img);
         }
@@ -776,7 +930,7 @@ public:
         {
             for(size_t c = 0; c < layer1->channels(); c++)
             {
-                ofxCvGrayscaleImage *img = layer1_output_imgs[n];
+                std::shared_ptr<ofxCvGrayscaleImage> img = layer1_output_imgs[n];
                 if(img->getWidth() != layer1->width() ||
                    img->getHeight() != layer1->height())
                     img->allocate(layer1->width(), layer1->height());
@@ -853,14 +1007,17 @@ private:
     OFXCAFFE_MODEL_TYPE model;
     
     // Load net
-    Net<float> *net;
+    std::shared_ptr<Net<float> > net;
     
     // dense detection (8x8)
     ofxCvFloatImage dense_grid;
     
     // for drawing layers
-    vector<ofxCvColorImage *> layer1_imgs;
-    vector<ofxCvGrayscaleImage *> layer1_output_imgs;
+    vector<std::shared_ptr<ofxCvColorImage> > layer1_imgs;
+    vector<pkm::Mat> layer1_means, layer1_covs;
+    vector<std::shared_ptr<ofxCvGrayscaleImage> > layer1_output_imgs;
+    vector<std::shared_ptr<ofxCvGrayscaleImage> > layer1_weight_mean_imgs;
+    vector<std::shared_ptr<ofxCvGrayscaleImage> > layer1_weight_std_imgs;
     
     // for converting grayscale to rgb jet/cmaps...
     pkmColormap cmap;

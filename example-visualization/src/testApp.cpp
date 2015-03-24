@@ -32,6 +32,7 @@
 
 //--------------------------------------------------------------
 void testApp::setup(){
+    b_setup = false;
     
     width = 1280; height = 720;
 
@@ -50,10 +51,14 @@ void testApp::setup(){
     b_mutex = false;
     
     layer_num = 0;
+    
+    b_setup = true;
 }
 
 //--------------------------------------------------------------
 void testApp::update(){
+    if(!b_setup) return;
+    
     ofSetWindowTitle(ofToString(ofGetFrameRate()));
     
     camera.update();
@@ -70,6 +75,8 @@ void testApp::update(){
 
 //--------------------------------------------------------------
 void testApp::draw(){
+    if(!b_setup) return;
+    
     ofBackground(255);
     ofSetColor(255);
     if (b_0)
@@ -93,9 +100,9 @@ void testApp::draw(){
         if (b_1)
             caffe->drawLabelAt(20, 50);
         if (b_2)
-            caffe->drawLayerXParams(0, 80, width, 32, layer_num);
+            caffe->drawLayerXParams(0, 80, width, 32, layer_num, ofGetElapsedTimef() * 10.0);
         if (b_3)
-            caffe->drawLayerXOutput(0, 80, width, 32, layer_num);
+            caffe->drawLayerXOutput(0, 420, width, 32, layer_num);
         if (b_4)
             caffe->drawProbabilities(0, 500, width, 200);
         b_mutex = false;
@@ -110,6 +117,8 @@ void testApp::draw(){
 
 //--------------------------------------------------------------
 void testApp::keyPressed(int key){
+    ofResetElapsedTimeCounter();
+    
     cout << key << endl;
     if (key == '0')
         b_0 = !b_0;
@@ -180,6 +189,8 @@ void testApp::mouseReleased(int x, int y, int button){
 
 //--------------------------------------------------------------
 void testApp::windowResized(int w, int h){
+    width = w;
+    height = h;
 
 }
 

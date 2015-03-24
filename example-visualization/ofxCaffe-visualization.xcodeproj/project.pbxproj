@@ -1341,6 +1341,7 @@
 					"/Users/pkmital/pkm/dev/of-git/libs/glfw/lib/osx",
 				);
 				OTHER_LDFLAGS = (
+					"-DHAVE_OPENCV",
 					"$(OF_CORE_LIBS)",
 					"$(CAFFE_DEPENDS_LIBS)",
 					"$(CUDA_LIBS)",
@@ -1400,6 +1401,7 @@
 					"/Users/pkmital/pkm/dev/of-git/libs/glfw/lib/osx",
 				);
 				OTHER_LDFLAGS = (
+					"-DHAVE_OPENCV",
 					"$(OF_CORE_LIBS)",
 					"$(CAFFE_DEPENDS_LIBS)",
 					"$(CUDA_LIBS)",

@@ -76,7 +76,7 @@ public:
     
     //--------------------------------------------------------------
     // hacky mutex for when changing caffe model
-    bool b_mutex;
+    bool b_mutex, b_setup;
     
     //--------------------------------------------------------------
     // which layer are we visualizing
