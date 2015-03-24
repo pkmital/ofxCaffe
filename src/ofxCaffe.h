@@ -606,6 +606,7 @@ public:
         cv::cvtColor(img, img, CV_RGB2BGR);
         img = img - mean_img;
         
+        crop_imgs.resize(net->input_blobs()[0]->num());
         crop_imgs[0] = img(cv::Rect(0, 0, width, height));
         crop_imgs[1] = img(cv::Rect(mean_img.cols - width, 0, width, height));
         crop_imgs[2] = img(cv::Rect(0, mean_img.rows - height, width, height));
@@ -621,10 +622,6 @@ public:
         blob_proto.set_channels(net->input_blobs()[0]->channels());
         blob_proto.set_height(net->input_blobs()[0]->height());
         blob_proto.set_width(net->input_blobs()[0]->width());
-
-//        for (size_t i = 0; i < data_size; ++i) {
-//            blob_proto.add_data(0.);
-//        }
         
         size_t prev_i = 0;
         for (size_t num_i = 0; num_i < net->input_blobs()[0]->num(); num_i++)
@@ -714,9 +711,7 @@ public:
     void forward(cv::Mat& img)
     {
         // Get max label depending on architecture, just a single label
-        if (model == OFXCAFFE_MODEL_VGG_16 ||
-            model == OFXCAFFE_MODEL_VGG_19 ||
-            model == OFXCAFFE_MODEL_BVLC_CAFFENET ||
+        if (model == OFXCAFFE_MODEL_BVLC_CAFFENET ||
             model == OFXCAFFE_MODEL_HYBRID ||
             model == OFXCAFFE_MODEL_BVLC_GOOGLENET ||
             model == OFXCAFFE_MODEL_RCNN_ILSVRC2013)
@@ -725,13 +720,19 @@ public:
             
             result_mat = pkm::Mat(result[0]->channels(), result[0]->height()*result[0]->width(), result[0]->cpu_data());
             result_mat.max(max, max_i);
+        }
+        else if(model == OFXCAFFE_MODEL_VGG_16 ||
+                model == OFXCAFFE_MODEL_VGG_19)
+        {
+            const vector<Blob<float>*>& result = forwardArbitrarySizeToMeanSize(img);
             
+            result_mat = pkm::Mat(result[0]->channels(), result[0]->height()*result[0]->width(), result[0]->cpu_data());
+            result_mat.max(max, max_i);
         }
         // or for dense architecture, many labels that can be summed/averaged/etc...
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET_8x8 ||
                  model == OFXCAFFE_MODEL_BVLC_CAFFENET_34x17)
         {
-            
             const vector<Blob<float>*>& result = forwardArbitrarySizeToMeanSize(img);
             
             pkm::Mat result_mat_grid(result[0]->channels(), result[0]->height()*result[0]->width(), result[0]->cpu_data());
@@ -1016,7 +1017,7 @@ public:
                 {
                     for(size_t h = 0; h < layer1->height(); h++)
                     {
-                        fp_to[h * widthStep + w] = fp_from[ ((n * layer1->channels() + c) * layer1->height() + h) * layer1->width() + w ] * 2.0;
+                        fp_to[h * widthStep + w] = fp_from[ ((n * layer1->channels() + c) * layer1->height() + h) * layer1->width() + w ];
                     }
                 }
                 img->flagImageChanged();
