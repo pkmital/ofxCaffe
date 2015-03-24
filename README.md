@@ -52,7 +52,7 @@ Troubleshooting
 To Do
 ======
 
-* Properly crop images and mirror them to produce batch images
+* Properly crop images and mirror them to produce batch images [done w/ https://github.com/pkmital/ofxCaffe/commit/259a9214119ea69b0e403f39713231c8e30b188d]
 * R-CNN region proposals
 * Possibly other models can support region proposals and still be fast
 * Add Network in Network
