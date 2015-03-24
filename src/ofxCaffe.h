@@ -556,7 +556,9 @@ public:
                 }
             }
             
-            cv::resize(mean_img, mean_img, cv::Size(width, height));
+            crop_imgs.resize(net->input_blobs()[0]->num());
+            
+//            cv::resize(mean_img, mean_img, cv::Size(width, height));
         }
         
         b_allocated = true;
@@ -596,12 +598,75 @@ public:
         
     }
     
-    // Setting the image automatically calls forward prop and finds the best label
-    void forward(cv::Mat& img)
+    const vector<Blob<float>*>& forwardArbitrarySizeto227Crops(cv::Mat& img)
     {
-        // some of these networks are actually with 10 num, or 256 for hybrid, of different crops which I should figure out... then the original image is a bit larger.  for now i've simplified them to be just one figure... not sure how that effects performance...
+        if(img.rows != mean_img.rows || img.cols != mean_img.cols)
+            cv::resize(img, img, cv::Size(mean_img.rows, mean_img.cols));
         
-        if(img.rows != height || img.cols != height)
+        cv::cvtColor(img, img, CV_RGB2BGR);
+        img = img - mean_img;
+        
+        crop_imgs[0] = img(cv::Rect(0, 0, width, height));
+        crop_imgs[1] = img(cv::Rect(mean_img.cols - width, 0, width, height));
+        crop_imgs[2] = img(cv::Rect(0, mean_img.rows - height, width, height));
+        crop_imgs[3] = img(cv::Rect(mean_img.cols - width, mean_img.rows - height, width, height));
+        crop_imgs[4] = img(cv::Rect((mean_img.cols - width) / 2, (mean_img.rows - height) / 2, width, height));
+        for(int i = 0; i < 5; i++)
+            cv::flip(crop_imgs[i], crop_imgs[i + 5], 1);
+        
+        
+        //get the blobproto
+        BlobProto blob_proto;
+        blob_proto.set_num(net->input_blobs()[0]->num());
+        blob_proto.set_channels(net->input_blobs()[0]->channels());
+        blob_proto.set_height(net->input_blobs()[0]->height());
+        blob_proto.set_width(net->input_blobs()[0]->width());
+
+//        for (size_t i = 0; i < data_size; ++i) {
+//            blob_proto.add_data(0.);
+//        }
+        
+        size_t prev_i = 0;
+        for (size_t num_i = 0; num_i < net->input_blobs()[0]->num(); num_i++)
+        {
+            //get datum
+            Datum datum;
+            CVMatToDatum(crop_imgs[num_i], &datum);
+            
+            const size_t data_size = net->input_blobs()[0]->channels() * net->input_blobs()[0]->height() * net->input_blobs()[0]->width();
+            size_t size_in_datum = std::max<int>(datum.data().size(),
+                                                 datum.float_data_size());
+            
+            const string& data = datum.data();
+            if (data.size() != 0) {
+                for (size_t i = 0; i < size_in_datum; ++i) {
+                    blob_proto.add_data(0.);
+                    blob_proto.set_data(prev_i + i, (uint8_t)data[i]);
+                }
+                prev_i += size_in_datum;
+            }
+        }
+        
+        //set data into blob
+        //get the blob
+        Blob<float> blob(net->input_blobs()[0]->num(),
+                         net->input_blobs()[0]->channels(),
+                         net->input_blobs()[0]->height(),
+                         net->input_blobs()[0]->width());
+        blob.FromProto(blob_proto);
+        
+        //fill the vector
+        vector<Blob<float>*> bottom;
+        bottom.push_back(&blob);
+        float type = 0.0;
+        
+        // Forward Prop
+        return net->Forward(bottom, &type);
+    }
+    
+    const vector<Blob<float>*>& forwardArbitrarySizeToMeanSize(cv::Mat &img)
+    {
+        if(img.rows != width || img.cols != height)
             cv::resize(img, img, cv::Size(width, height));
         
         cv::cvtColor(img, img, CV_RGB2BGR);
@@ -622,7 +687,7 @@ public:
         blob_proto.set_width(datum.width());
         const int data_size = datum.channels() * datum.height() * datum.width();
         size_t size_in_datum = std::max<int>(datum.data().size(),
-                                          datum.float_data_size());
+                                             datum.float_data_size());
         for (size_t i = 0; i < size_in_datum; ++i) {
             blob_proto.add_data(0.);
         }
@@ -642,24 +707,33 @@ public:
         float type = 0.0;
         
         // Forward Prop
-        const vector<Blob<float>*>& result = net->Forward(bottom, &type);
-        
+        return net->Forward(bottom, &type);
+    }
+    
+    // Setting the image automatically calls forward prop and finds the best label
+    void forward(cv::Mat& img)
+    {
         // Get max label depending on architecture, just a single label
         if (model == OFXCAFFE_MODEL_VGG_16 ||
             model == OFXCAFFE_MODEL_VGG_19 ||
             model == OFXCAFFE_MODEL_BVLC_CAFFENET ||
             model == OFXCAFFE_MODEL_HYBRID ||
             model == OFXCAFFE_MODEL_BVLC_GOOGLENET ||
-            model == OFXCAFFE_MODEL_RCNN_ILSVRC2013) {
+            model == OFXCAFFE_MODEL_RCNN_ILSVRC2013)
+        {
+            const vector<Blob<float>*>& result = forwardArbitrarySizeto227Crops(img);
+            
             result_mat = pkm::Mat(result[0]->channels(), result[0]->height()*result[0]->width(), result[0]->cpu_data());
             result_mat.max(max, max_i);
             
-//            LOG(ERROR) << result[0]->num() << "x" <<  result[0]->channels() << "x" << result[0]->width() << "x" <<  result[0]->height() << " - max: " << max << " i " << max_i << " label: " << labels[max_i];
         }
         // or for dense architecture, many labels that can be summed/averaged/etc...
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET_8x8 ||
                  model == OFXCAFFE_MODEL_BVLC_CAFFENET_34x17)
         {
+            
+            const vector<Blob<float>*>& result = forwardArbitrarySizeToMeanSize(img);
+            
             pkm::Mat result_mat_grid(result[0]->channels(), result[0]->height()*result[0]->width(), result[0]->cpu_data());
             result_mat = result_mat_grid.sum(false);
             result_mat.max(max, max_i);
@@ -915,7 +989,7 @@ public:
         oss << layer1->num() << "x" << layer1->channels() << "x" << layer1->height() << "x" << layer1->width();
         cout << oss.str() << endl;
         
-        while(layer1_output_imgs.size() < layer1->channels())
+        while(layer1_output_imgs.size() < (layer1->num() * layer1->channels()))
         {
             std::shared_ptr<ofxCvGrayscaleImage> img(new ofxCvGrayscaleImage());
             img->allocate(layer1->width(), layer1->height());
@@ -1024,6 +1098,7 @@ private:
     
     // Keep the mean for each forward pass
     cv::Mat mean_img;
+    vector<cv::Mat> crop_imgs;
     
     // probabilities of all classes
     pkm::Mat result_mat;
