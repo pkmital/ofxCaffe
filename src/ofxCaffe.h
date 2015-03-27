@@ -29,23 +29,25 @@
 
 #pragma once
 
+#include "ofMain.h"
+#include "ofxOpenCv.h"
+
 #include <cuda_runtime.h>
+
+#undef TYPE_BOOL
 
 #include "caffe/caffe.hpp"
 #include "caffe/util/io.hpp"
 #include "caffe/blob.hpp"
 
-#include "/usr/local/include/opencv2/core/core.hpp"
-#include "/usr/local/include/opencv2/highgui/highgui.hpp"
+//#include "opencv2/core/core.hpp"
+//#include "opencv2/highgui/highgui.hpp"
 
 #include <boost/algorithm/string.hpp>
-
-#include "ofxOpenCv.h"
 
 #include "pkmMatrix.h"
 #include "pkmHeatmap.h"
 
-#include "ofMain.h"
 
 using namespace caffe;
 using namespace std;
@@ -404,10 +406,6 @@ public:
         int device_id = 0;
         Caffe::SetDevice(device_id);
         LOG(INFO) << "Using GPU";
-        
-        // Set to TEST Phase
-        Caffe::set_phase(Caffe::TEST);
-        
         model = OFXCAFFE_MODEL_NOT_ALLOCATED;
     }
     
@@ -416,8 +414,8 @@ public:
 //        if(b_allocated)
 //            delete net;
 //        
-//        for(int i = 0; i < layer1_imgs.size(); i++)
-//            delete layer1_imgs[i];
+//        for(int i = 0; i < net_layer_imgs.size(); i++)
+//            delete net_layer_imgs[i];
     }
     
     static vector<ofxCaffe::OFXCAFFE_MODEL_TYPE> getModelTypes()
@@ -459,42 +457,42 @@ public:
         
         // Load pre-trained net (binary proto) and associated labels
         if (model == OFXCAFFE_MODEL_VGG_16) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/vgg-16.txt", true)));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/vgg-16.txt", true), TEST));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/VGG_ILSVRC_16_layers.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_VGG_19) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/vgg-19.txt", true)));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/vgg-19.txt", true), TEST));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/VGG_ILSVRC_19_layers.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_HYBRID) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/hybridCNN_deploy.prototxt", true)));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/hybridCNN_deploy.prototxt", true), TEST));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/hybridCNN_iter_700000.caffemodel", true));
             loadHybridLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET_8x8) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/8x8-alexnet.txt", true)));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/8x8-alexnet.txt", true), TEST));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_caffenet_full_conv.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET_34x17) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/34x17-alexnet.txt", true)));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/34x17-alexnet.txt", true), TEST));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_caffenet_full_conv.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_caffenet.txt", true)));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_caffenet.txt", true), TRAIN));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_caffenet.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_GOOGLENET) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.txt", true)));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.txt", true), TEST));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_RCNN_ILSVRC2013) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_rcnn_ilsvrc13.txt", true)));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_rcnn_ilsvrc13.txt", true), TEST));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_rcnn_ilsvrc13.caffemodel", true));
             loadILSVRC2013();
         }
@@ -799,46 +797,46 @@ public:
                           size_t layer_num = 0,
                           size_t channel_offset = 0)
     {
-        boost::shared_ptr<Blob<float> > layer1 = net->params()[layer_num];
+        boost::shared_ptr<Blob<float> > net_layer = net->params()[layer_num];
         string layer_name = net->layer_names()[layer_num];
         
         ostringstream oss;
-        oss << layer1->num() << "x" << layer1->channels() << "x" << layer1->height() << "x" << layer1->width();
+        oss << net_layer->num() << "x" << net_layer->channels() << "x" << net_layer->height() << "x" << net_layer->width();
         cout << oss.str() << endl;
         
-        while(layer1_imgs.size() < layer1->num())
+        while(net_layer_imgs.size() < net_layer->num())
         {
             std::shared_ptr<ofxCvColorImage> img(new ofxCvColorImage());
-            img->allocate(layer1->width(), layer1->height());
-            layer1_imgs.push_back(img);
+            img->allocate(net_layer->width(), net_layer->height());
+            net_layer_imgs.push_back(img);
         }
         
         // go from Caffe's layout to many images in opencv
         // number N x channel K x height H x width W. Blob memory is row-major in layout so the last / rightmost dimension changes fastest. For example, the value at index (n, k, h, w) is physically located at index ((n * K + k) * H + h) * W + w.
-        const float *fp_from = layer1->cpu_data();
+        const float *fp_from = net_layer->cpu_data();
         
-        channel_offset = channel_offset % layer1->channels();
-        if(layer1->channels() <= 3)
+        channel_offset = channel_offset % net_layer->channels();
+        if(net_layer->channels() <= 3)
             channel_offset = 0;
             
-        const size_t max_channels = std::min<int>(layer1->channels(), 3);
-        for(size_t n = 0; n < layer1->num(); n++)
+        const size_t max_channels = std::min<int>(net_layer->channels(), 3);
+        for(size_t n = 0; n < net_layer->num(); n++)
         {
-            std::shared_ptr<ofxCvColorImage> img = layer1_imgs[n];
-            if(img->getWidth() != layer1->width() ||
-               img->getHeight() != layer1->height())
-                img->allocate(layer1->width(), layer1->height());
+            std::shared_ptr<ofxCvColorImage> img = net_layer_imgs[n];
+            if(img->getWidth() != net_layer->width() ||
+               img->getHeight() != net_layer->height())
+                img->allocate(net_layer->width(), net_layer->height());
             
             unsigned char *fp_to = (unsigned char *)img->getCvImage()->imageData;
             cv::Mat to(img->getCvImage());
             int widthStep = img->getCvImage()->widthStep;
             for(size_t c = 0; c < max_channels; c++)
             {
-                for(size_t w = 0; w < layer1->width(); w++)
+                for(size_t w = 0; w < net_layer->width(); w++)
                 {
-                    for(size_t h = 0; h < layer1->height(); h++)
+                    for(size_t h = 0; h < net_layer->height(); h++)
                     {
-                        fp_to[h * widthStep + 3 * w + c] = fp_from[ ((n * layer1->channels() + ((c + channel_offset) % layer1->channels())) * layer1->height() + h) * layer1->width() + w ] * 255.0 + + 128.0;
+                        fp_to[h * widthStep + 3 * w + c] = fp_from[ ((n * net_layer->channels() + ((c + channel_offset) % net_layer->channels())) * net_layer->height() + h) * net_layer->width() + w ] * 255.0 + + 128.0;
                     }
                 }
             }
@@ -864,86 +862,86 @@ public:
                                  size_t images_per_row = 32,
                                  size_t layer_num = 0)
     {
-        boost::shared_ptr<Blob<float> > layer1 = net->params()[layer_num];
+        boost::shared_ptr<Blob<float> > net_layer = net->params()[layer_num];
         string layer_name = net->layer_names()[layer_num];
         
         ostringstream oss;
-        oss << layer1->num() << "x" << layer1->channels() << "x" << layer1->height() << "x" << layer1->width();
+        oss << net_layer->num() << "x" << net_layer->channels() << "x" << net_layer->height() << "x" << net_layer->width();
         cout << oss.str() << endl;
         
-        while(layer1_weight_mean_imgs.size() < layer1->num())
+        while(net_layer_weight_mean_imgs.size() < net_layer->num())
         {
             std::shared_ptr<ofxCvGrayscaleImage> img(new ofxCvGrayscaleImage());
-            img->allocate(layer1->width(), layer1->height());
-            layer1_weight_mean_imgs.push_back(img);
+            img->allocate(net_layer->width(), net_layer->height());
+            net_layer_weight_mean_imgs.push_back(img);
             
             std::shared_ptr<ofxCvGrayscaleImage> img2(new ofxCvGrayscaleImage());
-            img2->allocate(layer1->width(), layer1->height());
-            layer1_weight_std_imgs.push_back(img2);
+            img2->allocate(net_layer->width(), net_layer->height());
+            net_layer_weight_std_imgs.push_back(img2);
         }
         
         // go from Caffe's layout to many images in opencv
         // number N x channel K x height H x width W. Blob memory is row-major in layout so the last / rightmost dimension changes fastest. For example, the value at index (n, k, h, w) is physically located at index ((n * K + k) * H + h) * W + w.
-        const float *fp_from = layer1->cpu_data();
-        const size_t max_channels = std::min<int>(layer1->channels(), 3);
-        layer1_means.resize(layer1->num());
-        layer1_covs.resize(layer1->num());
-        for(size_t n = 0; n < layer1->num(); n++)
+        const float *fp_from = net_layer->cpu_data();
+        const size_t max_channels = std::min<int>(net_layer->channels(), 3);
+        net_layer_means.resize(net_layer->num());
+        net_layer_covs.resize(net_layer->num());
+        for(size_t n = 0; n < net_layer->num(); n++)
         {
-            layer1_means[n].reset(layer1->height(), layer1->width(), 0.0f);
-            layer1_covs[n].reset(layer1->height(), layer1->width(), 0.0f);
+            net_layer_means[n].reset(net_layer->height(), net_layer->width(), 0.0f);
+            net_layer_covs[n].reset(net_layer->height(), net_layer->width(), 0.0f);
             
-            std::shared_ptr<ofxCvGrayscaleImage> img = layer1_weight_mean_imgs[n];
-            if(img->getWidth() != layer1->width() ||
-               img->getHeight() != layer1->height())
-            img->allocate(layer1->width(), layer1->height());
+            std::shared_ptr<ofxCvGrayscaleImage> img = net_layer_weight_mean_imgs[n];
+            if(img->getWidth() != net_layer->width() ||
+               img->getHeight() != net_layer->height())
+            img->allocate(net_layer->width(), net_layer->height());
             
             
-            std::shared_ptr<ofxCvGrayscaleImage> img2 = layer1_weight_std_imgs[n];
-            if(img2->getWidth() != layer1->width() ||
-               img2->getHeight() != layer1->height())
-            img2->allocate(layer1->width(), layer1->height());
+            std::shared_ptr<ofxCvGrayscaleImage> img2 = net_layer_weight_std_imgs[n];
+            if(img2->getWidth() != net_layer->width() ||
+               img2->getHeight() != net_layer->height())
+            img2->allocate(net_layer->width(), net_layer->height());
             
             unsigned char *fp_to = (unsigned char *)img->getCvImage()->imageData;
             unsigned char *fp_to2 = (unsigned char *)img2->getCvImage()->imageData;
             
             int widthStep = img->getCvImage()->widthStep;
             
-            for(size_t c = 0; c < layer1->channels(); c++)
+            for(size_t c = 0; c < net_layer->channels(); c++)
             {
-                for(size_t w = 0; w < layer1->width(); w++)
+                for(size_t w = 0; w < net_layer->width(); w++)
                 {
-                    for(size_t h = 0; h < layer1->height(); h++)
+                    for(size_t h = 0; h < net_layer->height(); h++)
                     {
-                        double val = (fp_from[ ((n * layer1->channels() + c) * layer1->height() + h) * layer1->width() + w ]);
-                        layer1_means[n].row(h)[w] += val;
-                        layer1_covs[n].row(h)[w] += (val * val);
+                        double val = (fp_from[ ((n * net_layer->channels() + c) * net_layer->height() + h) * net_layer->width() + w ]);
+                        net_layer_means[n].row(h)[w] += val;
+                        net_layer_covs[n].row(h)[w] += (val * val);
                     }
                 }
             }
             
-            for(size_t w = 0; w < layer1->width(); w++)
+            for(size_t w = 0; w < net_layer->width(); w++)
             {
-                for(size_t h = 0; h < layer1->height(); h++)
+                for(size_t h = 0; h < net_layer->height(); h++)
                 {
-                    double mean_val = layer1_means[n].row(h)[w] / layer1->channels();
-                    double std_val = sqrt(layer1_covs[n].row(h)[w] / layer1->channels() - mean_val * mean_val);
+                    double mean_val = net_layer_means[n].row(h)[w] / net_layer->channels();
+                    double std_val = sqrt(net_layer_covs[n].row(h)[w] / net_layer->channels() - mean_val * mean_val);
                     
-                    layer1_means[n].row(h)[w] = mean_val;
-                    layer1_covs[n].row(h)[w] = std_val;
+                    net_layer_means[n].row(h)[w] = mean_val;
+                    net_layer_covs[n].row(h)[w] = std_val;
                 }
             }
             
             
-            layer1_means[n].zNormalize();
-            layer1_covs[n].zNormalize();
+            net_layer_means[n].zNormalize();
+            net_layer_covs[n].zNormalize();
             
-            for(size_t w = 0; w < layer1->width(); w++)
+            for(size_t w = 0; w < net_layer->width(); w++)
             {
-                for(size_t h = 0; h < layer1->height(); h++)
+                for(size_t h = 0; h < net_layer->height(); h++)
                 {
-                    double mean_val = layer1_means[n].row(h)[w] * 32.0 + 128.0;
-                    double std_val = layer1_covs[n].row(h)[w] * 32.0 + 128.0;
+                    double mean_val = net_layer_means[n].row(h)[w] * 32.0 + 128.0;
+                    double std_val = net_layer_covs[n].row(h)[w] * 32.0 + 128.0;
                     fp_to[h * widthStep + w] = mean_val;
                     fp_to2[h * widthStep + w] = std_val;
                 }
@@ -964,7 +962,7 @@ public:
             
             
             img2->draw(px + nx * drawwidth + nx * padding + padding,
-                      (py + ny * drawheight + ny * padding + padding + 20) + ((layer1->num() / images_per_row) * (padding + drawheight)),
+                      (py + ny * drawheight + ny * padding + padding + 20) + ((net_layer->num() / images_per_row) * (padding + drawheight)),
                       drawwidth, drawheight);
             
         }
@@ -984,45 +982,47 @@ public:
                           size_t images_per_row = 32,
                           size_t layer_num = 1)
     {
-        boost::shared_ptr<Blob<float> > layer1 = net->blobs()[layer_num];
+        boost::shared_ptr<Blob<float> > net_layer = net->blobs()[layer_num];
         string layer_name = net->blob_names()[layer_num];
         ostringstream oss;
-        oss << layer1->num() << "x" << layer1->channels() << "x" << layer1->height() << "x" << layer1->width();
+        oss << net_layer->num() << "x" << net_layer->channels() << "x" << net_layer->height() << "x" << net_layer->width();
         cout << oss.str() << endl;
         
-        while(layer1_output_imgs.size() < (layer1->num() * layer1->channels()))
+        while(net_layer_output_imgs.size() < (net_layer->num() * net_layer->channels()))
         {
             std::shared_ptr<ofxCvGrayscaleImage> img(new ofxCvGrayscaleImage());
-            img->allocate(layer1->width(), layer1->height());
-            layer1_output_imgs.push_back(img);
+            img->allocate(net_layer->width(), net_layer->height());
+            net_layer_output_imgs.push_back(img);
         }
         
         ofSetColor(255);
         
         // number N x channel K x height H x width W. Blob memory is row-major in layout so the last / rightmost dimension changes fastest. For example, the value at index (n, k, h, w) is physically located at index ((n * K + k) * H + h) * W + w.
-        const float *fp_from = layer1->cpu_data();
-        for(size_t n = 0; n < layer1->num(); n++)
+        const float *fp_from = net_layer->cpu_data();
+        uint8 maxValue = 0.0;
+        for(size_t n = 0; n < net_layer->num(); n++)
         {
-            for(size_t c = 0; c < layer1->channels(); c++)
+            for(size_t c = 0; c < net_layer->channels(); c++)
             {
-                std::shared_ptr<ofxCvGrayscaleImage> img = layer1_output_imgs[n];
-                if(img->getWidth() != layer1->width() ||
-                   img->getHeight() != layer1->height())
-                    img->allocate(layer1->width(), layer1->height());
+                std::shared_ptr<ofxCvGrayscaleImage> img = net_layer_output_imgs[n];
+                if(img->getWidth() != net_layer->width() ||
+                   img->getHeight() != net_layer->height())
+                    img->allocate(net_layer->width(), net_layer->height());
                 unsigned char *fp_to = (unsigned char *)img->getCvImage()->imageData;
                 cv::Mat to(img->getCvImage());
                 int widthStep = img->getCvImage()->widthStep;
-                
-                for(size_t w = 0; w < layer1->width(); w++)
+                for(size_t w = 0; w < net_layer->width(); w++)
                 {
-                    for(size_t h = 0; h < layer1->height(); h++)
+                    for(size_t h = 0; h < net_layer->height(); h++)
                     {
-                        fp_to[h * widthStep + w] = fp_from[ ((n * layer1->channels() + c) * layer1->height() + h) * layer1->width() + w ];
+                        uint8 v = fp_from[ ((n * net_layer->channels() + c) * net_layer->height() + h) * net_layer->width() + w ];
+                        fp_to[h * widthStep + w] = v;
+                        maxValue = maxValue < v ? v : maxValue;
                     }
                 }
                 img->flagImageChanged();
-                size_t nx = (n*layer1->channels() + c) % images_per_row;
-                size_t ny = (n*layer1->channels() + c) / images_per_row;
+                size_t nx = (n*net_layer->channels() + c) % images_per_row;
+                size_t ny = (n*net_layer->channels() + c) / images_per_row;
                 size_t padding = 1;
                 size_t drawwidth = (width - padding * images_per_row) / (float)images_per_row;
                 size_t drawheight = drawwidth;
@@ -1031,6 +1031,7 @@ public:
                 ofTranslate(px + nx * drawwidth + nx * padding,
                             py + ny * drawheight + ny * padding + 20);
                 
+                cmap.setMaxValue((float)maxValue / 255.0);
                 cmap.begin(img->getTexture());
                 img->draw(0, 0, drawwidth, drawheight);
                 cmap.end();
@@ -1088,11 +1089,11 @@ private:
     ofxCvFloatImage dense_grid;
     
     // for drawing layers
-    vector<std::shared_ptr<ofxCvColorImage> > layer1_imgs;
-    vector<pkm::Mat> layer1_means, layer1_covs;
-    vector<std::shared_ptr<ofxCvGrayscaleImage> > layer1_output_imgs;
-    vector<std::shared_ptr<ofxCvGrayscaleImage> > layer1_weight_mean_imgs;
-    vector<std::shared_ptr<ofxCvGrayscaleImage> > layer1_weight_std_imgs;
+    vector<std::shared_ptr<ofxCvColorImage> > net_layer_imgs;
+    vector<pkm::Mat> net_layer_means, net_layer_covs;
+    vector<std::shared_ptr<ofxCvGrayscaleImage> > net_layer_output_imgs;
+    vector<std::shared_ptr<ofxCvGrayscaleImage> > net_layer_weight_mean_imgs;
+    vector<std::shared_ptr<ofxCvGrayscaleImage> > net_layer_weight_std_imgs;
     
     // for converting grayscale to rgb jet/cmaps...
     pkmColormap cmap;

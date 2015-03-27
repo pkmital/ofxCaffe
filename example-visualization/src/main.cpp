@@ -27,8 +27,6 @@
 
 #define HAVE_OPENCV
 
-#include "caffe/caffe.hpp"
-
 #include "ofMain.h"
 #include "testApp.h"
 
