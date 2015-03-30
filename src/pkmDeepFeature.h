@@ -20,8 +20,9 @@ public:
     void setImage(cv::Mat &img)
     {
         caffe->forward(img);
-        feature_fc5 = caffe->getLayerByName("conv5", true);
+        feature_fc5 = caffe->getLayerByName("conv5", false);
         feature_fc5.setTranspose();
+        feature_fc5.printAbbrev();
         
         feature_prob = caffe->getLayerByName("prob", false);
         feature_prob.setTranspose();
@@ -37,6 +38,13 @@ public:
     {
         return feature_fc5;
     }
+    
+//    float getFeatureFC5(int x, int y)
+//    {
+//        x = std::max<int>(0, std::min<int>(feature_fc5.rows - 1, x));
+//        y = std::max<int>(0, std::min<int>(feature_fc5.cols - 1, y));
+//        return feature_fc5.row(x)[y];
+//    }
     
     pkm::Mat& getFeatureProb()
     {

@@ -48,7 +48,6 @@
 #include "pkmMatrix.h"
 #include "pkmHeatmap.h"
 
-
 using namespace caffe;
 using namespace std;
 
@@ -404,6 +403,7 @@ public:
         // Set GPU
         Caffe::set_mode(Caffe::GPU);
         int device_id = 0;
+        Caffe::DeviceQuery();
         Caffe::SetDevice(device_id);
         LOG(INFO) << "Using GPU";
         model = OFXCAFFE_MODEL_NOT_ALLOCATED;
@@ -482,12 +482,12 @@ public:
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_caffenet.txt", true), TRAIN));
-            net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_caffenet.caffemodel", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("/Users/pkmital/pkm/dev/libs/caffe-git/models/bvlc_alexnet/deploy.prototxt", true), caffe::TEST));
+            net->CopyTrainedLayersFrom(ofToDataPath("/Users/pkmital/pkm/dev/libs/caffe-git/models/bvlc_alexnet/bvlc_alexnet.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_GOOGLENET) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.txt", true), TEST));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.txt", true), caffe::TEST));
             net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.caffemodel", true));
             loadImageNetLabels();
         }
