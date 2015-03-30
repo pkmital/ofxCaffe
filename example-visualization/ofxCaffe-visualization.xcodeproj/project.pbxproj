@@ -29,6 +29,7 @@
 		89CB4DEE1A53CB4E00459607 /* libhdf5_hl.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 89CB4DED1A53CB4E00459607 /* libhdf5_hl.7.dylib */; };
 		89CB4DF61A53D03600459607 /* freetype.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 89CB4DF51A53D03600459607 /* freetype.a */; };
 		89CB4DF81A53D04400459607 /* freeimage.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 89CB4DF71A53D04400459607 /* freeimage.a */; };
+		89D1FD0A1AC98FF4000961E4 /* libcaffe.so in Frameworks */ = {isa = PBXBuildFile; fileRef = 89D1FD091AC98FF4000961E4 /* libcaffe.so */; };
 		89D3B5D41A57A45E00C590AC /* pkmHeatmap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 89D3B5D31A57A45E00C590AC /* pkmHeatmap.cpp */; };
 		BBAB23CB13894F3D00AA2426 /* GLUT.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = BBAB23BE13894E4700AA2426 /* GLUT.framework */; };
 		E4328149138ABC9F0047C5CB /* openFrameworksDebug.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E4328148138ABC890047C5CB /* openFrameworksDebug.a */; };
@@ -192,7 +193,6 @@
 		89C388971AC4A11300D253B8 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk/System/Library/Frameworks/Accelerate.framework; sourceTree = DEVELOPER_DIR; };
 		89C8F9A31A5E38AF00D292F1 /* ofxCaffe.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ofxCaffe.cpp; sourceTree = "<group>"; };
 		89C8F9A41A5E38AF00D292F1 /* ofxCaffe.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxCaffe.h; sourceTree = "<group>"; };
-		89C8F9CB1A5E3DBB00D292F1 /* libcaffe.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libcaffe.a; sourceTree = "<group>"; };
 		89CB4DC51A53CB4E00459607 /* H5ACpublic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = H5ACpublic.h; path = lib/H5ACpublic.h; sourceTree = "<group>"; };
 		89CB4DC61A53CB4E00459607 /* H5api_adpt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = H5api_adpt.h; path = lib/H5api_adpt.h; sourceTree = "<group>"; };
 		89CB4DC71A53CB4E00459607 /* H5Apublic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = H5Apublic.h; path = lib/H5Apublic.h; sourceTree = "<group>"; };
@@ -236,6 +236,7 @@
 		89CB4DED1A53CB4E00459607 /* libhdf5_hl.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libhdf5_hl.7.dylib; path = lib/libhdf5_hl.7.dylib; sourceTree = "<group>"; };
 		89CB4DF51A53D03600459607 /* freetype.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = freetype.a; path = ../../../libs/freetype/lib/osx/freetype.a; sourceTree = "<group>"; };
 		89CB4DF71A53D04400459607 /* freeimage.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = freeimage.a; path = ../../../libs/FreeImage/lib/osx/freeimage.a; sourceTree = "<group>"; };
+		89D1FD091AC98FF4000961E4 /* libcaffe.so */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libcaffe.so; sourceTree = "<group>"; };
 		89D3B5D21A57A45E00C590AC /* pkmHeatmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pkmHeatmap.h; path = ../../../../pkm/pkmHeatmap/pkmHeatmap.h; sourceTree = "<group>"; };
 		89D3B5D31A57A45E00C590AC /* pkmHeatmap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pkmHeatmap.cpp; path = ../../../../pkm/pkmHeatmap/pkmHeatmap.cpp; sourceTree = "<group>"; };
 		BBAB23BE13894E4700AA2426 /* GLUT.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLUT.framework; path = ../../../libs/glut/lib/osx/GLUT.framework; sourceTree = "<group>"; };
@@ -295,6 +296,7 @@
 				899ECA161A6350FD003CD719 /* libhdf5.7.dylib in Frameworks */,
 				89CB4DF81A53D04400459607 /* freeimage.a in Frameworks */,
 				89CB4DF61A53D03600459607 /* freetype.a in Frameworks */,
+				89D1FD0A1AC98FF4000961E4 /* libcaffe.so in Frameworks */,
 				8993353418ADBB080037A907 /* libz.dylib in Frameworks */,
 				E4328149138ABC9F0047C5CB /* openFrameworksDebug.a in Frameworks */,
 			);
@@ -523,7 +525,7 @@
 		89C8F9CA1A5E3DBB00D292F1 /* lib */ = {
 			isa = PBXGroup;
 			children = (
-				89C8F9CB1A5E3DBB00D292F1 /* libcaffe.a */,
+				89D1FD091AC98FF4000961E4 /* libcaffe.so */,
 			);
 			path = lib;
 			sourceTree = "<group>";
@@ -763,7 +765,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = "/bin/bash -l";
-			shellScript = "cp -f \"$OPENCV_LIBS_PATH/libopencv_core.2.4.8.dylib\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libopencv_core.2.4.dylib\";\ncp -f \"$OPENCV_LIBS_PATH/libopencv_imgproc.2.4.8.dylib\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libopencv_imgproc.2.4.dylib\";\ncp -f \"$OPENCV_LIBS_PATH/libopencv_highgui.2.4.8.dylib\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libopencv_highgui.2.4.dylib\";\n\ninstall_name_tool -change libopencv_core.2.4.dylib @executable_path/libopencv_core.2.4.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change libopencv_imgproc.2.4.dylib @executable_path/libopencv_imgproc.2.4.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change libopencv_highgui.2.4.dylib @executable_path/libopencv_highgui.2.4.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\n\ninstall_name_tool -change @rpath/libcudart.7.0.dylib /Developer/NVIDIA/CUDA-7.0/lib/libcudart.7.0.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change @rpath/libcublas.7.0.dylib /Developer/NVIDIA/CUDA-7.0/lib/libcublas.7.0.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change @rpath/libcurand.7.0.dylib /Developer/NVIDIA/CUDA-7.0/lib/libcurand.7.0.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\n\ncp -f ../../../libs/fmodex/lib/osx/libfmodex.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libfmodex.dylib\";\ncp -f \"$HDF5_LIBS_PATH/libhdf5_hl.7.dylib\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libhdf5_hl.7.dylib\"\ncp -f \"$HDF5_LIBS_PATH/libhdf5.7.dylib\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libhdf5.7.dylib\"\ninstall_name_tool -change ./libfmodex.dylib @executable_path/libfmodex.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change libhdf5_hl.7.dylib @executable_path/libhdf5_hl.7.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change libhdf5.7.dylib @executable_path/libhdf5.7.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change @rpath/libcudart.6.5.dylib /usr/local/cuda/lib/libcudart.6.5.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change @rpath/libcufft.6.5.dylib /usr/local/cuda/lib/libcufft.6.5.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change @rpath/libcublas.6.5.dylib /usr/local/cuda/lib/libcublas.6.5.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change @rpath/libcurand.6.5.dylib /usr/local/cuda/lib/libcurand.6.5.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\nmkdir -p \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Resources/\"\ncp -f \"$ICON_FILE\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Resources/\"\n";
+			shellScript = "cp -f \"$OPENCV_LIBS_PATH/libopencv_core.2.4.8.dylib\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libopencv_core.2.4.dylib\";\ncp -f \"$OPENCV_LIBS_PATH/libopencv_imgproc.2.4.8.dylib\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libopencv_imgproc.2.4.dylib\";\ncp -f \"$OPENCV_LIBS_PATH/libopencv_highgui.2.4.8.dylib\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libopencv_highgui.2.4.dylib\";\n\ninstall_name_tool -change libopencv_core.2.4.dylib @executable_path/libopencv_core.2.4.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change libopencv_imgproc.2.4.dylib @executable_path/libopencv_imgproc.2.4.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change libopencv_highgui.2.4.dylib @executable_path/libopencv_highgui.2.4.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\n\ncp -f ../../../libs/fmodex/lib/osx/libfmodex.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libfmodex.dylib\";\ncp -f \"$HDF5_LIBS_PATH/libhdf5_hl.7.dylib\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libhdf5_hl.7.dylib\"\ncp -f \"$HDF5_LIBS_PATH/libhdf5.7.dylib\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libhdf5.7.dylib\"\ninstall_name_tool -change ./libfmodex.dylib @executable_path/libfmodex.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change libhdf5_hl.7.dylib @executable_path/libhdf5_hl.7.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change libhdf5.7.dylib @executable_path/libhdf5.7.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\n\ninstall_name_tool -change @rpath/libcudart.7.0.dylib /Developer/NVIDIA/CUDA-7.0/lib/libcudart.7.0.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change @rpath/libcublas.7.0.dylib /Developer/NVIDIA/CUDA-7.0/lib/libcublas.7.0.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\ninstall_name_tool -change @rpath/libcurand.7.0.dylib /Developer/NVIDIA/CUDA-7.0/lib/libcurand.7.0.dylib \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\n\ncp -f \"$CAFFE_LIBS_PATH/libcaffe.so\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/libcaffe.so\";\ninstall_name_tool -change @rpath/libcaffe.so \"@executable_path/libcaffe.so\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/MacOS/$PRODUCT_NAME\";\n\nmkdir -p \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Resources/\"\ncp -f \"$ICON_FILE\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.app/Contents/Resources/\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1004,6 +1006,7 @@
 					"$(PROJECT_DIR)/lib",
 					/Users/pkmital/pkm/dev/openFrameworks/addons/ofxCaffe/libs/hdf5,
 					/Users/pkmital/pkm/dev/openFrameworks/libs/freetype/lib/osx,
+					/Users/pkmital/pkm/dev/openFrameworks/addons/ofxCaffe/libs/caffe/lib,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_LDFLAGS = (
@@ -1061,6 +1064,7 @@
 					"$(PROJECT_DIR)/lib",
 					/Users/pkmital/pkm/dev/openFrameworks/addons/ofxCaffe/libs/hdf5,
 					/Users/pkmital/pkm/dev/openFrameworks/libs/freetype/lib/osx,
+					/Users/pkmital/pkm/dev/openFrameworks/addons/ofxCaffe/libs/caffe/lib,
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_LDFLAGS = (
