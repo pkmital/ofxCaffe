@@ -340,58 +340,83 @@ public:
         return net->Forward(bottom, &type);
     }
     
-    void amplifyLayer(cv::Mat& img, cv::Mat& img2, int layer_num, float l1 = 0.01, float l2 = 0.0, float scale = 1.0, float clip = 2.0)
+    void amplifyLayer(cv::Mat& img, cv::Mat& img2, int layer_num, float l1 = 0.1, float l2 = 0.1, float step_size = 1.5, int num_octaves = 4, float octave_scale = 1.4, float clip = 5.0, int jitter = 32)
     {
-        int rand_x = rand() % 32;
-        int rand_y = rand() % 32;
-        double p = cv::norm(img);
-        cv::Mat m = img(cv::Rect(rand_x, rand_y, width, height));
-        forward(m);
-        
-        boost::shared_ptr<Blob<float> > forward_blob = net->blobs()[layer_num];
-        const float *target_data = forward_blob->cpu_data();
-        net->blobs()[layer_num]->scale_diff(scale);
-        float *target_diff = net->blobs()[layer_num]->mutable_cpu_diff();
-        
-        for(size_t n = 0; n < forward_blob->num(); n++)
+        for(int scale_i = 0; scale_i < num_octaves; scale_i++)
         {
-            for(size_t c = 0; c < forward_blob->channels(); c++)
+            cv::Mat img_rescaled;
+            img.copyTo(img_rescaled);
+            int new_width = img.cols / powf(octave_scale, scale_i);
+            int new_height = img.rows / powf(octave_scale, scale_i);
+            cv::resize(img_rescaled, img_rescaled, cv::Size(new_width, new_height));
+            
+//            int new_width = img_rescaled.cols > width ? std::min<int>(img_rescaled.cols, (width + rand() % (img_rescaled.cols - width)) * 1.5) : width;
+//            int new_height = img_rescaled.rows > height ? std::min<int>(img_rescaled.rows, (height + rand() % (img_rescaled.rows - height)) * 1.5) : height;
+            
+//            int rand_x = 0;
+//            int rand_y = 0;
+            int rand_x = new_width >= img_rescaled.cols ? 0 : rand() % jitter;
+            int rand_y = new_height >= img_rescaled.rows ? 0 : rand() % jitter;
+            
+//            double p = cv::norm(img_rescaled);
+            cv::Mat m = img_rescaled(cv::Rect(rand_x, rand_y, new_width, new_height));
+            forward(m);
+            
+            boost::shared_ptr<Blob<float> > forward_blob = net->blobs()[layer_num];
+            const float *target_data = forward_blob->cpu_data();
+//            net->blobs()[layer_num]->scale_diff(scale);
+            float *target_diff = net->blobs()[layer_num]->mutable_cpu_diff();
+            
+            for(size_t n = 0; n < forward_blob->num(); n++)
             {
-                for(size_t w = 0; w < forward_blob->width(); w++)
+                for(size_t c = 0; c < forward_blob->channels(); c++)
                 {
-                    for(size_t h = 0; h < forward_blob->height(); h++)
+                    for(size_t w = 0; w < forward_blob->width(); w++)
                     {
-                        size_t idx = ((n * forward_blob->channels() + c) * forward_blob->height() + h) * forward_blob->width() + w;
-                        target_diff[idx] = l1 * target_data[idx];
-                        target_diff[idx] += l2 * std::min<float>(clip, std::max<float>(-clip, target_data[idx]));
+                        for(size_t h = 0; h < forward_blob->height(); h++)
+                        {
+                            size_t idx = ((n * forward_blob->channels() + c) * forward_blob->height() + h) * forward_blob->width() + w;
+//                            target_diff[idx] = target_data[idx];
+                            target_diff[idx] = -l1 * fabs(target_data[idx]);
+                            target_diff[idx] -= l2 * std::min<float>(clip, std::max<float>(-clip, target_data[idx]));
+                        }
                     }
                 }
             }
-        }
-        net->BackwardFromTo(layer_num, 0);
-        
-        boost::shared_ptr<Blob<float> > backward_blob = net->blob_by_name("data");
-        
-        const float *fp_from = backward_blob->cpu_diff();
-        float norm = backward_blob->asum_diff() / (float)backward_blob->count();
-        float mean_data = backward_blob->asum_data() / (float)backward_blob->count();
-        float minValue = HUGE_VAL;
-        float width_scale = 1.0;//(img2.cols - 1.0) / (float)net_layer_backward->width();
-        float height_scale = 1.0;//(img2.rows - 1.0) / (float)net_layer_backward->height();
-        
-        for(size_t n = 0; n < backward_blob->num(); n++)
-        {
-            for(size_t c = 0; c < backward_blob->channels(); c++)
+            net->BackwardFromTo(layer_num, 0);
+            
+            boost::shared_ptr<Blob<float> > backward_blob = net->blob_by_name("data");
+            
+            const float *fp_from = backward_blob->cpu_diff();
+            float norm = step_size / (backward_blob->asum_diff() / (float)backward_blob->count());
+            float mean_data = backward_blob->asum_data() / (float)backward_blob->count() + cv::mean(mean_img)[0];
+            float minValue = HUGE_VAL;
+            
+            
+            
+//            float width_scale = (new_width - 1.0) / (float)(backward_blob->width());
+//            float height_scale = (new_height - 1.0) / (float)(backward_blob->height());
+            
+            for(size_t n = 0; n < backward_blob->num(); n++)
             {
-                for(size_t w = 0; w < backward_blob->width(); w++)
+                for(size_t c = 0; c < backward_blob->channels(); c++)
                 {
-                    for(size_t h = 0; h < backward_blob->height(); h++)
+                    for(size_t w = 0; w < backward_blob->width(); w++)
                     {
-                        size_t idx = ((n * backward_blob->channels() + c) * backward_blob->height() + h) * backward_blob->width() + w;
-                        img2.at<cv::Vec3b>(h * height_scale + rand_y, w * width_scale + rand_x)[c] += (fp_from[idx]/mean_data*norm);
+                        for(size_t h = 0; h < backward_blob->height(); h++)
+                        {
+                            size_t idx = ((n * backward_blob->channels() + c) * backward_blob->height() + h) * backward_blob->width() + w;
+                            img_rescaled.at<cv::Vec3b>(h + rand_y, w + rand_x)[c] += std::max<float>(-mean_data, std::min<float>(255-mean_data, norm * fp_from[idx] / mean_data * norm));// / mean_data * norm;// + mean_data;// / mean_data * norm; //fp_from[idx] / mean_data * norm; //
+                        }
                     }
                 }
             }
+            
+            cv::resize(img_rescaled, img_rescaled, cv::Size(img2.cols, img2.rows));
+//            m /= mean_data;
+            img_rescaled /= (float)num_octaves;
+//            img += m;
+            img2 += img_rescaled;
         }
     }
     
@@ -560,7 +585,7 @@ public:
         channel_offset = channel_offset % net_layer->channels();
         if(net_layer->channels() <= 3)
             channel_offset = 0;
-            
+        
         const size_t max_channels = std::min<int>(net_layer->channels(), 3);
         for(size_t n = 0; n < net_layer->num(); n++)
         {
