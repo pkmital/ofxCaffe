@@ -36,6 +36,9 @@
 
 #undef TYPE_BOOL
 
+#include "pkmMatrix.h"
+#include "pkmHeatmap.h"
+
 #include "caffe/caffe.hpp"
 #include "caffe/util/io.hpp"
 #include "caffe/blob.hpp"
@@ -45,17 +48,14 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "pkmMatrix.h"
-#include "pkmHeatmap.h"
-
 using namespace caffe;
-using namespace std;
 
 
 class ofxCaffe {
     
 public:
     typedef enum {
+        OFXCAFFE_MODEL_DECONV,
         OFXCAFFE_MODEL_VGG_16,
         OFXCAFFE_MODEL_VGG_19,
         OFXCAFFE_MODEL_HYBRID,
@@ -71,7 +71,7 @@ public:
     :
     b_allocated(false)
     {   
-        // Set GPU
+        // Set CPU
         Caffe::set_mode(Caffe::GPU);
         int device_id = 0;
         Caffe::DeviceQuery();
@@ -92,6 +92,7 @@ public:
     static vector<ofxCaffe::OFXCAFFE_MODEL_TYPE> getModelTypes()
     {
         vector<ofxCaffe::OFXCAFFE_MODEL_TYPE> d;
+        d.push_back(OFXCAFFE_MODEL_DECONV);
         d.push_back(OFXCAFFE_MODEL_VGG_16);
         d.push_back(OFXCAFFE_MODEL_VGG_19);
         d.push_back(OFXCAFFE_MODEL_HYBRID);
@@ -106,6 +107,7 @@ public:
     static vector<string> getModelTypeNames()
     {
         vector<string> d;
+        d.push_back("Deconvolution Test");
         d.push_back("VGG ILSVRC 2014 (16 Layers): 1000 Object Categories");
         d.push_back("VGG ILSVRC 2014 (19 Layers): 1000 Object Categories");
         d.push_back("MIT Places-CNN Hybrid (Places + ImageNet): 971 Object Categories + 200 Scene Categories = 1171 Categories");
@@ -127,29 +129,33 @@ public:
         this->model = model;
         
         // Load pre-trained net (binary proto) and associated labels
-        if (model == OFXCAFFE_MODEL_VGG_16) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/vgg-16.txt", true), TEST));
-            net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/VGG_ILSVRC_16_layers.caffemodel", true));
+        if (model == OFXCAFFE_MODEL_DECONV) {
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("models/deconv.txt", true), TEST));
+            net->CopyTrainedLayersFrom(ofToDataPath("/Users/pkmital/pkm/dev/libs/caffe-git/models/bvlc_alexnet/bvlc_alexnet.caffemodel", true));
+            loadImageNetLabels();
+        } else if (model == OFXCAFFE_MODEL_VGG_16) {
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("models/vgg-16.txt", true), TEST));
+            net->CopyTrainedLayersFrom(ofToDataPath("models/VGG_ILSVRC_16_layers.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_VGG_19) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/vgg-19.txt", true), TEST));
-            net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/VGG_ILSVRC_19_layers.caffemodel", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("models/vgg-19.txt", true), TEST));
+            net->CopyTrainedLayersFrom(ofToDataPath("models/VGG_ILSVRC_19_layers.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_HYBRID) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/hybridCNN_deploy.prototxt", true), TEST));
-            net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/hybridCNN_iter_700000.caffemodel", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("models/hybridCNN_deploy.prototxt", true), TEST));
+            net->CopyTrainedLayersFrom(ofToDataPath("models/hybridCNN_iter_700000.caffemodel", true));
             loadHybridLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET_8x8) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/8x8-alexnet.txt", true), TEST));
-            net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_caffenet_full_conv.caffemodel", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("models/8x8-alexnet.txt", true), TEST));
+            net->CopyTrainedLayersFrom(ofToDataPath("models/bvlc_caffenet_full_conv.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET_34x17) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/34x17-alexnet.txt", true), TEST));
-            net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_caffenet_full_conv.caffemodel", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("models/34x17-alexnet.txt", true), TEST));
+            net->CopyTrainedLayersFrom(ofToDataPath("models/bvlc_caffenet_full_conv.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_CAFFENET) {
@@ -158,13 +164,13 @@ public:
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_BVLC_GOOGLENET) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.txt", true), caffe::TEST));
-            net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_googlenet.caffemodel", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("models/bvlc_googlenet.txt", true), caffe::TEST));
+            net->CopyTrainedLayersFrom(ofToDataPath("models/bvlc_googlenet.caffemodel", true));
             loadImageNetLabels();
         }
         else if (model == OFXCAFFE_MODEL_RCNN_ILSVRC2013) {
-            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_rcnn_ilsvrc13.txt", true), TEST));
-            net->CopyTrainedLayersFrom(ofToDataPath("../../../../../addons/ofxCaffe/models/bvlc_reference_rcnn_ilsvrc13.caffemodel", true));
+            net = std::shared_ptr<Net<float> >(new Net<float>(ofToDataPath("models/bvlc_reference_rcnn_ilsvrc13.txt", true), TEST));
+            net->CopyTrainedLayersFrom(ofToDataPath("models/bvlc_reference_rcnn_ilsvrc13.caffemodel", true));
             loadILSVRC2013();
         }
         else {
@@ -197,7 +203,8 @@ public:
                  model == OFXCAFFE_MODEL_BVLC_CAFFENET ||
                  model == OFXCAFFE_MODEL_HYBRID ||
                  model == OFXCAFFE_MODEL_BVLC_GOOGLENET ||
-                 model == OFXCAFFE_MODEL_RCNN_ILSVRC2013)
+                 model == OFXCAFFE_MODEL_RCNN_ILSVRC2013 ||
+                 model == OFXCAFFE_MODEL_DECONV)
         {
             if(model == OFXCAFFE_MODEL_BVLC_CAFFENET_8x8)
                 dense_grid.allocate(8, 8);
@@ -206,9 +213,9 @@ public:
         
             BlobProto blob_proto;
             if (model == OFXCAFFE_MODEL_HYBRID)
-                ReadProtoFromBinaryFileOrDie(ofToDataPath("../../../../../addons/ofxCaffe/models/hybridCNN_mean.binaryproto", true).c_str(), &blob_proto);
+                ReadProtoFromBinaryFileOrDie(ofToDataPath("models/hybridCNN_mean.binaryproto", true).c_str(), &blob_proto);
             else
-                ReadProtoFromBinaryFileOrDie(ofToDataPath("../../../../../addons/ofxCaffe/models/imagenet_mean.binaryproto", true).c_str(), &blob_proto);
+                ReadProtoFromBinaryFileOrDie(ofToDataPath("models/imagenet_mean.binaryproto", true).c_str(), &blob_proto);
             cout << "channels: " << blob_proto.channels() << endl;
             
             mean_img = cv::Mat(cv::Size(blob_proto.width(), blob_proto.height()), CV_8UC3);
@@ -277,12 +284,15 @@ public:
         
         crop_imgs.resize(net->input_blobs()[0]->num());
         crop_imgs[0] = img(cv::Rect(0, 0, width, height));
-        crop_imgs[1] = img(cv::Rect(mean_img.cols - width, 0, width, height));
-        crop_imgs[2] = img(cv::Rect(0, mean_img.rows - height, width, height));
-        crop_imgs[3] = img(cv::Rect(mean_img.cols - width, mean_img.rows - height, width, height));
-        crop_imgs[4] = img(cv::Rect((mean_img.cols - width) / 2, (mean_img.rows - height) / 2, width, height));
-        for(int i = 0; i < 5; i++)
-            cv::flip(crop_imgs[i], crop_imgs[i + 5], 1);
+        if(net->input_blobs()[0]->num() == 10)
+        {
+            crop_imgs[1] = img(cv::Rect(mean_img.cols - width, 0, width, height));
+            crop_imgs[2] = img(cv::Rect(0, mean_img.rows - height, width, height));
+            crop_imgs[3] = img(cv::Rect(mean_img.cols - width, mean_img.rows - height, width, height));
+            crop_imgs[4] = img(cv::Rect((mean_img.cols - width) / 2, (mean_img.rows - height) / 2, width, height));
+            for(int i = 0; i < 5; i++)
+                cv::flip(crop_imgs[i], crop_imgs[i + 5], 1);
+        }
         
         
         //get the blobproto
@@ -328,6 +338,55 @@ public:
         
         // Forward Prop
         return net->Forward(bottom, &type);
+    }
+    
+    void amplifyLayer(cv::Mat& img, cv::Mat& img2, int layer_num, float l1 = 1.0, float l2 = 1.0, float scale = 1.0, float clip = 5.0)
+    {
+        double p = cv::norm(img);
+        forward(img);
+        
+        boost::shared_ptr<Blob<float> > forward_blob = net->blobs()[layer_num];
+        const float *target_data = forward_blob->cpu_data();
+        net->blobs()[layer_num]->scale_diff(scale);
+        float *target_diff = net->blobs()[layer_num]->mutable_cpu_diff();
+        
+        size_t n = 0;
+        for(size_t c = 0; c < forward_blob->channels(); c++)
+        {
+            for(size_t w = 0; w < forward_blob->width(); w++)
+            {
+                for(size_t h = 0; h < forward_blob->height(); h++)
+                {
+                    size_t idx = ((n * forward_blob->channels() + c) * forward_blob->height() + h) * forward_blob->width() + w;
+                    target_diff[idx] = -l1 * target_data[idx];
+                    target_diff[idx] -= l2 * std::min<float>(clip, std::max<float>(-clip, target_data[idx]));
+                }
+            }
+        }
+        net->BackwardFrom(layer_num);
+        
+        boost::shared_ptr<Blob<float> > backward_blob = net->blob_by_name("data");
+        
+        const float *fp_from = backward_blob->cpu_diff();
+        float maxValue = 0.0;
+        float minValue = HUGE_VAL;
+        float width_scale = 1.0;//(img2.cols - 1.0) / (float)net_layer_backward->width();
+        float height_scale = 1.0;//(img2.rows - 1.0) / (float)net_layer_backward->height();
+        
+        for(size_t c = 0; c < backward_blob->channels(); c++)
+        {
+            for(size_t w = 0; w < backward_blob->width(); w++)
+            {
+                for(size_t h = 0; h < backward_blob->height(); h++)
+                {
+                    size_t idx = ((n * backward_blob->channels() + c) * backward_blob->height() + h) * backward_blob->width() + w;
+                    img2.at<cv::Vec3b>(h * height_scale, w * width_scale)[c] += scale * fp_from[idx];
+                    maxValue = maxValue < fp_from[idx] ? fp_from[idx] : maxValue;
+                }
+            }
+        }
+
+        cout << maxValue << endl;
     }
     
     const vector<Blob<float>*>& forwardArbitrarySizeToMeanSize(cv::Mat &img)
@@ -383,7 +442,8 @@ public:
         if (model == OFXCAFFE_MODEL_BVLC_CAFFENET ||
             model == OFXCAFFE_MODEL_HYBRID ||
             model == OFXCAFFE_MODEL_BVLC_GOOGLENET ||
-            model == OFXCAFFE_MODEL_RCNN_ILSVRC2013)
+            model == OFXCAFFE_MODEL_RCNN_ILSVRC2013 ||
+            model == OFXCAFFE_MODEL_DECONV)
         {
             const vector<Blob<float>*>& result = forwardArbitrarySizeto227Crops(img);
             
@@ -446,6 +506,11 @@ public:
         if (model == OFXCAFFE_MODEL_BVLC_CAFFENET_8x8 ||
             model == OFXCAFFE_MODEL_BVLC_CAFFENET_34x17)
             dense_grid.draw(0, 0, w, h);
+    }
+    
+    string getPredictedLabel()
+    {
+        return labels[max_i];
     }
     
     // Draw the detected label
@@ -559,8 +624,8 @@ public:
         net_layer_covs.resize(net_layer->num());
         for(size_t n = 0; n < net_layer->num(); n++)
         {
-            net_layer_means[n].reset(net_layer->height(), net_layer->width(), 0.0f);
-            net_layer_covs[n].reset(net_layer->height(), net_layer->width(), 0.0f);
+            net_layer_means[n] = pkm::Mat(net_layer->height(), net_layer->width(), 0.0f);
+            net_layer_covs[n] = pkm::Mat(net_layer->height(), net_layer->width(), 0.0f);
             
             std::shared_ptr<ofxCvGrayscaleImage> img = net_layer_weight_mean_imgs[n];
             if(img->getWidth() != net_layer->width() ||
@@ -671,11 +736,21 @@ public:
         return fp_from[ ((n * net_layer->channels() + c) * net_layer->height() + h) * net_layer->width() + w ];
     }
     
-    const float *getCPUDataForOutputLayer(size_t layer_num)
+    void getDimensionsForOutputLayer(size_t layer_num, int &n, int &c, int &w, int &h)
     {
         boost::shared_ptr<Blob<float> > net_layer = net->blobs()[layer_num];
-        return net_layer->cpu_data();
+        n = net_layer->num();
+        c = net_layer->channels();
+        w = net_layer->width();
+        h = net_layer->height();
     }
+    
+    const float* getCPUDataForOutputLayer(size_t layer_num, int n = 0, int c = 0, int w = 0, int h = 0)
+    {
+        boost::shared_ptr<Blob<float> > net_layer = net->blobs()[layer_num];
+        return net_layer->cpu_data() + net_layer->offset(n, c, h, w);
+    }
+    
     
     // Draws the first network layer's output of the convolution.
     void drawLayerXOutput(size_t px = 0,
@@ -701,7 +776,8 @@ public:
         
         // number N x channel K x height H x width W. Blob memory is row-major in layout so the last / rightmost dimension changes fastest. For example, the value at index (n, k, h, w) is physically located at index ((n * K + k) * H + h) * W + w.
         const float *fp_from = net_layer->cpu_data();
-        uint8 maxValue = 0.0;
+        float maxValue = 0.0;
+        float minValue = HUGE_VAL;
         for(size_t n = 0; n < net_layer->num(); n++)
         {
             for(size_t c = 0; c < net_layer->channels(); c++)
@@ -720,8 +796,13 @@ public:
                         uint8 v = fp_from[ ((n * net_layer->channels() + c) * net_layer->height() + h) * net_layer->width() + w ];
                         fp_to[h * widthStep + w] = v;
                         maxValue = maxValue < v ? v : maxValue;
+                        minValue = minValue > v ? v : minValue;
                     }
                 }
+                
+                maxValue += minValue;
+                to += minValue;
+                
                 img->flagImageChanged();
                 size_t nx = (n*net_layer->channels() + c) % images_per_row;
                 size_t ny = (n*net_layer->channels() + c) / images_per_row;
@@ -732,7 +813,7 @@ public:
                 ofPushMatrix();
                 ofTranslate(px + nx * drawwidth + nx * padding,
                             py + ny * drawheight + ny * padding + 20);
-                
+                cout << maxValue << endl;
                 cmap.setMaxValue((float)maxValue / 255.0);
                 cmap.begin(img->getTexture());
                 img->draw(0, 0, drawwidth, drawheight);
@@ -786,7 +867,7 @@ private:
     void loadImageNetLabels()
     {
         ofFile fp;
-        fp.open(ofToDataPath("../../../../../addons/ofxCaffe/models/synset_words.txt", true));
+        fp.open(ofToDataPath("models/synset_words.txt", true));
         ofBuffer buffer(fp);
         for (ofBuffer::Line it = buffer.getLines().begin(), end = buffer.getLines().end(); it != end; ++it) {
             string line = *it;
@@ -810,7 +891,7 @@ private:
     void loadILSVRC2012()
     {
         ofFile fp;
-        fp.open(ofToDataPath("../../../../../addons/ofxCaffe/models/ILSVRC2012.txt", true));
+        fp.open(ofToDataPath("models/ILSVRC2012.txt", true));
         ofBuffer buffer(fp);
         for (ofBuffer::Line it = buffer.getLines().begin(), end = buffer.getLines().end(); it != end; ++it) {
             string line = *it;
@@ -825,7 +906,7 @@ private:
     void loadILSVRC2013()
     {
         ofFile fp;
-        fp.open(ofToDataPath("../../../../../addons/ofxCaffe/models/ILSVRC2013.txt", true));
+        fp.open(ofToDataPath("models/ILSVRC2013.txt", true));
         ofBuffer buffer(fp);
         for (ofBuffer::Line it = buffer.getLines().begin(), end = buffer.getLines().end(); it != end; ++it) {
             string line = *it;
@@ -840,7 +921,7 @@ private:
     void loadILSVRC2014()
     {
         ofFile fp;
-        fp.open(ofToDataPath("../../../../../addons/ofxCaffe/models/ILSVRC2014.txt", true));
+        fp.open(ofToDataPath("models/ILSVRC2014.txt", true));
         ofBuffer buffer(fp);
         for (ofBuffer::Line it = buffer.getLines().begin(), end = buffer.getLines().end(); it != end; ++it) {
             string line = *it;
@@ -858,7 +939,7 @@ private:
         ofFile fp;
         ofBuffer buf;
         
-        fp.open(ofToDataPath("../../../../../addons/ofxCaffe/models/synset_words.txt", true));
+        fp.open(ofToDataPath("models/synset_words.txt", true));
         ofBuffer buffer(fp);
         for (ofBuffer::Line it = buffer.getLines().begin(), end = buffer.getLines().end(); it != end; ++it) {
             string line = *it;
@@ -875,7 +956,7 @@ private:
 
         fp.close();
         
-        fp.open(ofToDataPath("../../../../../addons/ofxCaffe/models/categoryIndex_hybridCNN.csv", true));
+        fp.open(ofToDataPath("models/categoryIndex_hybridCNN.csv", true));
         ofBuffer buffer2(fp);
         for (ofBuffer::Line it = buffer2.getLines().begin(), end = buffer2.getLines().end(); it != end; ++it) {
             string line = *it;

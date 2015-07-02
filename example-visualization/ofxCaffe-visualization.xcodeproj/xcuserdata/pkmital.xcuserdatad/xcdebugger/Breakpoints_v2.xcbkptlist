@@ -175,7 +175,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "596"
             endingLineNumber = "596"
-            landmarkName = "getLayerByName(string name = &quot;conv5&quot;, bool b_collapse_data = true)"
+            landmarkName = "drawLayerXParamsReduced(size_t px = 0, size_t py = 60, size_t width = 1280, size_t images_per_row = 32, size_t layer_num = 0)"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
@@ -207,7 +207,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "559"
             endingLineNumber = "559"
-            landmarkName = "initModel(OFXCAFFE_MODEL_TYPE model)"
+            landmarkName = "drawLayerXParamsReduced(size_t px = 0, size_t py = 60, size_t width = 1280, size_t images_per_row = 32, size_t layer_num = 0)"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
@@ -223,7 +223,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "543"
             endingLineNumber = "543"
-            landmarkName = "initModel(OFXCAFFE_MODEL_TYPE model)"
+            landmarkName = "drawLayerXParamsReduced(size_t px = 0, size_t py = 60, size_t width = 1280, size_t images_per_row = 32, size_t layer_num = 0)"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>
@@ -239,7 +239,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "562"
             endingLineNumber = "562"
-            landmarkName = "initModel(OFXCAFFE_MODEL_TYPE model)"
+            landmarkName = "drawLayerXParamsReduced(size_t px = 0, size_t py = 60, size_t width = 1280, size_t images_per_row = 32, size_t layer_num = 0)"
             landmarkType = "5">
          </BreakpointContent>
       </BreakpointProxy>

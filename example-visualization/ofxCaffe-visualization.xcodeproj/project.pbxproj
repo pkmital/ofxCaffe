@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		891D2FC61A6056F600F371FC /* pkmDeepFeature.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 891D2FC41A6056F600F371FC /* pkmDeepFeature.cpp */; };
-		897EB17F19B95C1B0013642B /* pkmMatrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 897EB17D19B95C1B0013642B /* pkmMatrix.cpp */; };
 		8993353418ADBB080037A907 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8993353318ADBB080037A907 /* libz.dylib */; };
 		899EC8B81A632473003CD719 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 899EC8B71A632473003CD719 /* AVFoundation.framework */; };
 		899EC8BA1A63248A003CD719 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 899EC8B91A63248A003CD719 /* CoreMedia.framework */; };
@@ -24,6 +23,7 @@
 		899ECA171A6350FD003CD719 /* libhdf5.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 899ECA101A6350FD003CD719 /* libhdf5.dylib */; };
 		899ECA181A6350FD003CD719 /* libhdf5_hl.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 899ECA131A6350FD003CD719 /* libhdf5_hl.7.dylib */; };
 		899ECA191A6350FD003CD719 /* libhdf5_hl.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 899ECA141A6350FD003CD719 /* libhdf5_hl.dylib */; };
+		89A12D511B27EDEA00FFB18C /* pkmMatrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 89A12D491B27EDEA00FFB18C /* pkmMatrix.cpp */; };
 		89C388981AC4A11300D253B8 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89C388971AC4A11300D253B8 /* Accelerate.framework */; };
 		89C8F9A51A5E38C100D292F1 /* ofxCaffe.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 89C8F9A31A5E38AF00D292F1 /* ofxCaffe.cpp */; };
 		89CB4DEE1A53CB4E00459607 /* libhdf5_hl.7.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 89CB4DED1A53CB4E00459607 /* libhdf5_hl.7.dylib */; };
@@ -85,8 +85,6 @@
 /* Begin PBXFileReference section */
 		891D2FC41A6056F600F371FC /* pkmDeepFeature.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pkmDeepFeature.cpp; sourceTree = "<group>"; };
 		891D2FC51A6056F600F371FC /* pkmDeepFeature.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pkmDeepFeature.h; sourceTree = "<group>"; };
-		897EB17D19B95C1B0013642B /* pkmMatrix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = pkmMatrix.cpp; path = ../../../../pkm/pkmMatrix/pkmMatrix.cpp; sourceTree = "<group>"; };
-		897EB17E19B95C1B0013642B /* pkmMatrix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pkmMatrix.h; path = ../../../../pkm/pkmMatrix/pkmMatrix.h; sourceTree = "<group>"; };
 		898EEE811AC513FC005E29B1 /* blob.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = blob.hpp; sourceTree = "<group>"; };
 		898EEE821AC513FC005E29B1 /* caffe.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = caffe.hpp; sourceTree = "<group>"; };
 		898EEE831AC513FC005E29B1 /* common.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = common.hpp; sourceTree = "<group>"; };
@@ -187,6 +185,8 @@
 		899ECA131A6350FD003CD719 /* libhdf5_hl.7.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libhdf5_hl.7.dylib; sourceTree = "<group>"; };
 		899ECA141A6350FD003CD719 /* libhdf5_hl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libhdf5_hl.dylib; sourceTree = "<group>"; };
 		899ECA151A6350FD003CD719 /* libhdf5_hl.la */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = libhdf5_hl.la; sourceTree = "<group>"; };
+		89A12D491B27EDEA00FFB18C /* pkmMatrix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = pkmMatrix.cpp; sourceTree = "<group>"; };
+		89A12D4A1B27EDEA00FFB18C /* pkmMatrix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pkmMatrix.h; sourceTree = "<group>"; };
 		89A683791A0713B000DD2B1A /* libcublas.6.5.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcublas.6.5.dylib; path = "../../../../../../../../Developer/NVIDIA/CUDA-6.5/lib/libcublas.6.5.dylib"; sourceTree = "<group>"; };
 		89A6837A1A0713B000DD2B1A /* libcudart.6.5.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcudart.6.5.dylib; path = "../../../../../../../../Developer/NVIDIA/CUDA-6.5/lib/libcudart.6.5.dylib"; sourceTree = "<group>"; };
 		89A6837B1A0713B000DD2B1A /* libcufft.6.5.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcufft.6.5.dylib; path = "../../../../../../../../Developer/NVIDIA/CUDA-6.5/lib/libcufft.6.5.dylib"; sourceTree = "<group>"; };
@@ -308,8 +308,7 @@
 		897EB18019B95C1E0013642B /* pkmMatrix */ = {
 			isa = PBXGroup;
 			children = (
-				897EB17D19B95C1B0013642B /* pkmMatrix.cpp */,
-				897EB17E19B95C1B0013642B /* pkmMatrix.h */,
+				89A12D401B27EDEA00FFB18C /* include */,
 			);
 			name = pkmMatrix;
 			sourceTree = "<group>";
@@ -479,6 +478,16 @@
 			);
 			name = hdf5;
 			path = ../libs/hdf5;
+			sourceTree = "<group>";
+		};
+		89A12D401B27EDEA00FFB18C /* include */ = {
+			isa = PBXGroup;
+			children = (
+				89A12D491B27EDEA00FFB18C /* pkmMatrix.cpp */,
+				89A12D4A1B27EDEA00FFB18C /* pkmMatrix.h */,
+			);
+			name = include;
+			path = ../../../../pkm/pkmMatrix/include;
 			sourceTree = "<group>";
 		};
 		89A683781A07129500DD2B1A /* cuda */ = {
@@ -775,6 +784,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				89C8F9A51A5E38C100D292F1 /* ofxCaffe.cpp in Sources */,
+				89A12D511B27EDEA00FFB18C /* pkmMatrix.cpp in Sources */,
 				E4B69E200A3A1BDC003C02F2 /* main.cpp in Sources */,
 				899EC9E01A634316003CD719 /* ofxCvFloatImage.cpp in Sources */,
 				E4B69E210A3A1BDC003C02F2 /* testApp.cpp in Sources */,
@@ -786,7 +796,6 @@
 				899EC9E11A634316003CD719 /* ofxCvGrayscaleImage.cpp in Sources */,
 				899EC9DE1A634316003CD719 /* ofxCvColorImage.cpp in Sources */,
 				899EC9E41A634316003CD719 /* ofxCvShortImage.cpp in Sources */,
-				897EB17F19B95C1B0013642B /* pkmMatrix.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

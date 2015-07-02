@@ -27,6 +27,6 @@
  
  */
 
-#include "ofxCaffe.h"
+#include "ofxCaffe.hpp"
 
 
