@@ -1,0 +1,15 @@
+<group>
+	<L1_Norm>0.01</L1_Norm>
+	<L2_Norm>0.0325</L2_Norm>
+	<Step_Size>6.5</Step_Size>
+<group/>
+	<Iterations>4</Iterations>
+	<Input_Mix>0.07</Input_Mix>
+	<Zoom>1</Zoom>
+	<Rotation>0</Rotation>
+	<Layer_Num>14</Layer_Num>
+	<Octaves>4</Octaves>
+	<Octave_Scale>1.4</Octave_Scale>
+	<Gradient_Clip>10</Gradient_Clip>
+	<Jitter>5</Jitter>
+</group>
