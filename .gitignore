@@ -2,3 +2,5 @@
 *.caffemodel
 *.*~
 complex*
+*.a
+*.dylib
