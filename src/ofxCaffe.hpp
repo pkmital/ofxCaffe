@@ -42,7 +42,8 @@
 #include "caffe/caffe.hpp"
 #include "caffe/util/io.hpp"
 #include "caffe/blob.hpp"
-
+#include "caffe/util/math_functions.hpp"
+#include "caffe/syncedmem.hpp"
 //#include "opencv2/core/core.hpp"
 //#include "opencv2/highgui/highgui.hpp"
 
@@ -123,6 +124,43 @@ public:
     {
         return getModelTypes().size();
     }
+    
+    vector<string> getBlobNames()
+    {
+        return net->blob_names();
+    }
+    
+    int getNumberOfNeurons(string layer_name)
+    {
+        return net->blob_by_name(layer_name)->channels();
+    }
+    
+    void printBlobNames()
+    {
+        int i = 0;
+        vector<string> names = net->blob_names();
+        for(auto name_i : names)
+        {
+            cout << i++ << ": " << name_i << endl;
+        }
+    }
+    
+    vector<string> getLayerNames()
+    {
+        return net->layer_names();
+    }
+    
+    void printLayerNames()
+    {
+        int i = 0;
+        vector<string> names = net->layer_names();
+        for(auto name_i : names)
+        {
+            cout << i++ << ": " << name_i << endl;
+        }
+    }
+    
+    
     
     void initModel(OFXCAFFE_MODEL_TYPE model)
     {
@@ -340,84 +378,816 @@ public:
         return net->Forward(bottom, &type);
     }
     
-    void amplifyLayer(cv::Mat& img, cv::Mat& img2, int layer_num, float l1 = 0.1, float l2 = 0.1, float step_size = 1.5, int num_octaves = 4, float octave_scale = 1.4, float clip = 5.0, int jitter = 32)
+    void preprocess(cv::Mat &rgb_img)
     {
-        for(int scale_i = 0; scale_i < num_octaves; scale_i++)
+        cv::Scalar_<float> mean_img_rsz;
+        mean_img_rsz[2] = 104.0;
+        mean_img_rsz[1] = 116.0;
+        mean_img_rsz[0] = 122.0;
+        
+        cv::cvtColor(rgb_img, rgb_img, CV_RGB2BGR);
+        rgb_img.convertTo(rgb_img, CV_32FC3, 1.0);
+        rgb_img -= mean_img_rsz;
+//        rgb_img *= (1.0/255.0);
+    }
+    
+    void deprocess(cv::Mat &bgr_img)
+    {
+        cv::Scalar_<float> mean_img_rsz;
+        mean_img_rsz[2] = 104.0;
+        mean_img_rsz[1] = 116.0;
+        mean_img_rsz[0] = 122.0;
+//        bgr_img *= (255.0);
+        bgr_img += mean_img_rsz;
+        cv::cvtColor(bgr_img, bgr_img, CV_BGR2RGB);
+        
+        bgr_img.convertTo(bgr_img, CV_8UC3, 1.0);
+    }
+    
+    void computeMean(boost::shared_ptr<Blob<float>> &blob, cv::Scalar &mean_img, size_t n = 0)
+    {
+        const float * ptr = blob->mutable_cpu_data();
+        
+        for(size_t c = 0; c < blob->channels(); c++)
         {
-            cv::Mat img_rescaled;
-            img.copyTo(img_rescaled);
-            int new_width = img.cols / powf(octave_scale, scale_i);
-            int new_height = img.rows / powf(octave_scale, scale_i);
-            cv::resize(img_rescaled, img_rescaled, cv::Size(new_width, new_height));
-            
-//            int new_width = img_rescaled.cols > width ? std::min<int>(img_rescaled.cols, (width + rand() % (img_rescaled.cols - width)) * 1.5) : width;
-//            int new_height = img_rescaled.rows > height ? std::min<int>(img_rescaled.rows, (height + rand() % (img_rescaled.rows - height)) * 1.5) : height;
-            
-//            int rand_x = 0;
-//            int rand_y = 0;
-            int rand_x = new_width >= img_rescaled.cols ? 0 : rand() % jitter;
-            int rand_y = new_height >= img_rescaled.rows ? 0 : rand() % jitter;
-            
-//            double p = cv::norm(img_rescaled);
-            cv::Mat m = img_rescaled(cv::Rect(rand_x, rand_y, new_width, new_height));
-            forward(m);
-            
-            boost::shared_ptr<Blob<float> > forward_blob = net->blobs()[layer_num];
-            const float *target_data = forward_blob->cpu_data();
-//            net->blobs()[layer_num]->scale_diff(scale);
-            float *target_diff = net->blobs()[layer_num]->mutable_cpu_diff();
-            
-            for(size_t n = 0; n < forward_blob->num(); n++)
+            for(size_t w = 0; w < blob->width(); w++)
             {
-                for(size_t c = 0; c < forward_blob->channels(); c++)
+                for(size_t h = 0; h < blob->height(); h++)
                 {
-                    for(size_t w = 0; w < forward_blob->width(); w++)
-                    {
-                        for(size_t h = 0; h < forward_blob->height(); h++)
-                        {
-                            size_t idx = ((n * forward_blob->channels() + c) * forward_blob->height() + h) * forward_blob->width() + w;
-//                            target_diff[idx] = target_data[idx];
-                            target_diff[idx] = -l1 * fabs(target_data[idx]);
-                            target_diff[idx] -= l2 * std::min<float>(clip, std::max<float>(-clip, target_data[idx]));
-                        }
-                    }
+                    size_t idx = ((n * blob->channels() + c) * blob->height() + h) * blob->width() + w;
+                    mean_img[c] += ptr[idx];
                 }
             }
-            net->BackwardFromTo(layer_num, 0);
-            
-            boost::shared_ptr<Blob<float> > backward_blob = net->blob_by_name("data");
-            
-            const float *fp_from = backward_blob->cpu_diff();
-            float norm = step_size / (backward_blob->asum_diff() / (float)backward_blob->count());
-            float mean_data = backward_blob->asum_data() / (float)backward_blob->count() + cv::mean(mean_img)[0];
-            float minValue = HUGE_VAL;
-            
-            
-            
-//            float width_scale = (new_width - 1.0) / (float)(backward_blob->width());
-//            float height_scale = (new_height - 1.0) / (float)(backward_blob->height());
-            
-            for(size_t n = 0; n < backward_blob->num(); n++)
-            {
-                for(size_t c = 0; c < backward_blob->channels(); c++)
-                {
-                    for(size_t w = 0; w < backward_blob->width(); w++)
-                    {
-                        for(size_t h = 0; h < backward_blob->height(); h++)
-                        {
-                            size_t idx = ((n * backward_blob->channels() + c) * backward_blob->height() + h) * backward_blob->width() + w;
-                            img_rescaled.at<cv::Vec3b>(h + rand_y, w + rand_x)[c] += std::max<float>(-mean_data, std::min<float>(255-mean_data, norm * fp_from[idx] / mean_data * norm));// / mean_data * norm;// + mean_data;// / mean_data * norm; //fp_from[idx] / mean_data * norm; //
-                        }
-                    }
-                }
-            }
-            
-            cv::resize(img_rescaled, img_rescaled, cv::Size(img2.cols, img2.rows));
-//            m /= mean_data;
-            img_rescaled /= (float)num_octaves;
-//            img += m;
-            img2 += img_rescaled;
+            mean_img[c] /= (float)(blob->width() * blob->height());
         }
+        
+        cout << mean_img[0] << ", " << mean_img[1] << ", " << mean_img[2] << endl;
+    }
+
+    
+    
+    void copyToCaffeBlob(const cv::Mat &img, const boost::shared_ptr<Blob<float>> &blob, size_t n = 0)
+    {
+        float * ptr = blob->mutable_cpu_data();
+
+        for(size_t c = 0; c < blob->channels(); c++)
+        {
+            for(size_t w = 0; w < blob->width(); w++)
+            {
+                for(size_t h = 0; h < blob->height(); h++)
+                {
+                    size_t idx = ((n * blob->channels() + c) * blob->height() + h) * blob->width() + w;
+                    ptr[idx] = img.ptr<float>(h)[w*blob->channels() + c];
+                }
+            }
+        }
+    }
+    
+    
+    void copyToOpenCV(const boost::shared_ptr<Blob<float>> &blob, cv::Mat &img, size_t n = 0)
+    {
+        const float * ptr = blob->mutable_cpu_data();
+
+        for(size_t c = 0; c < blob->channels(); c++)
+        {
+            for(size_t w = 0; w < blob->width(); w++)
+            {
+                for(size_t h = 0; h < blob->height(); h++)
+                {
+                    size_t idx = ((n * blob->channels() + c) * blob->height() + h) * blob->width() + w;
+                    img.ptr<float>(h)[w*blob->channels() + c] = ptr[idx];
+                }
+            }
+        }
+    }
+    
+    cv::Mat translateImg(cv::Mat &img, int offsetx, int offsety)
+    {
+        cv::Mat trans_mat = (cv::Mat_<double>(2,3) << 1, 0, offsetx, 0, 1, offsety);
+        cv::warpAffine(img,img,trans_mat,img.size());
+        return trans_mat;
+    }
+    
+    void shiftImage(float *ptr, int jitter_x, int jitter_y, int n, int c, int h, int w)
+    {
+        pkm::Mat jittered_src(n*c*h, w, ptr, false);
+        size_t rows = jittered_src.rows;
+        if(jitter_y < 0)
+        {
+            /*
+             ---------------------
+             |                   | - 0
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1 - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - rows - 1 - jitter_y
+             |     first half    | - ...
+             |                   | - rows - 1
+             ---------------------
+             
+             --to--
+             
+             ---------------------
+             |                   | - 0
+             |     first half    | - ...
+             |                   | - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - jitter_y
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1
+             ---------------------
+             */
+            
+            jitter_y = abs(jitter_y);
+            pkm::Mat jittered_src_row_first_half = jittered_src.rowRange(rows - jitter_y, rows, true);
+            pkm::Mat jittered_src_row_second_half = jittered_src.rowRange(0, rows - jitter_y, true);
+            
+            jittered_src.rowRange(0, jitter_y, false).copy(jittered_src_row_first_half);
+            jittered_src.rowRange(jitter_y, rows, false).copy(jittered_src_row_second_half);
+        }
+        else if(jitter_y > 0)
+        {
+            
+            /*
+             ---------------------
+             |                   | - 0
+             |     first half    | - ...
+             |                   | - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - jitter_y
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1
+             ---------------------
+             
+             --to--
+             
+             ---------------------
+             |                   | - 0
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1 - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - rows - 1 - jitter_y
+             |     first half    | - ...
+             |                   | - rows - 1
+             ---------------------
+             
+             */
+            
+            pkm::Mat jittered_src_row_first_half = jittered_src.rowRange(0,
+                                                                         jitter_y, true);
+            pkm::Mat jittered_src_row_second_half = jittered_src.rowRange(jitter_y,
+                                                                          rows, true);
+            
+            jittered_src.rowRange(0, rows - jitter_y, false).copy(jittered_src_row_second_half);
+            jittered_src.rowRange(rows - jitter_y, rows, false).copy(jittered_src_row_first_half);
+        }
+        
+        jittered_src.setTranspose();
+        jitter_y = jitter_x;
+        
+        rows = jittered_src.rows;
+        if(jitter_y < 0)
+        {
+            /*
+             ---------------------
+             |                   | - 0
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1 - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - rows - 1 - jitter_y
+             |     first half    | - ...
+             |                   | - rows - 1
+             ---------------------
+             
+             --to--
+             
+             ---------------------
+             |                   | - 0
+             |     first half    | - ...
+             |                   | - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - jitter_y
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1
+             ---------------------
+             */
+            
+            jitter_y = abs(jitter_y);
+            pkm::Mat jittered_src_row_first_half = jittered_src.rowRange(rows - jitter_y, rows, true);
+            pkm::Mat jittered_src_row_second_half = jittered_src.rowRange(0, rows - jitter_y, true);
+            
+            jittered_src.rowRange(0, jitter_y, false).copy(jittered_src_row_first_half);
+            jittered_src.rowRange(jitter_y, rows, false).copy(jittered_src_row_second_half);
+        }
+        else if(jitter_y > 0)
+        {
+            
+            /*
+             ---------------------
+             |                   | - 0
+             |     first half    | - ...
+             |                   | - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - jitter_y
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1
+             ---------------------
+             
+             --to--
+             
+             ---------------------
+             |                   | - 0
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1 - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - rows - 1 - jitter_y
+             |     first half    | - ...
+             |                   | - rows - 1
+             ---------------------
+             
+             */
+            
+            pkm::Mat jittered_src_row_first_half = jittered_src.rowRange(0,
+                                                                         jitter_y, true);
+            pkm::Mat jittered_src_row_second_half = jittered_src.rowRange(jitter_y,
+                                                                          rows, true);
+            
+            jittered_src.rowRange(0, rows - jitter_y, false).copy(jittered_src_row_second_half);
+            jittered_src.rowRange(rows - jitter_y, rows, false).copy(jittered_src_row_first_half);
+        }
+        
+        jittered_src.setTranspose();
+    }
+    
+    
+    void unShiftImage(float *ptr, int jitter_x, int jitter_y, int n, int c, int h, int w)
+    {
+        pkm::Mat jittered_src(n*c*h, w, ptr, false);
+        size_t rows = jittered_src.rows;
+        if(jitter_y < 0)
+        {
+            /*
+             ---------------------
+             |                   | - 0
+             |     first half    | - ...
+             |                   | - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - jitter_y
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1
+             ---------------------
+             
+             --to--
+             
+             
+             ---------------------
+             |                   | - 0
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1 - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - rows - 1 - jitter_y
+             |     first half    | - ...
+             |                   | - rows - 1
+             ---------------------
+
+
+             */
+            
+            jitter_y = abs(jitter_y);
+            pkm::Mat jittered_src_row_first_half = jittered_src.rowRange(0, jitter_y, true);
+            pkm::Mat jittered_src_row_second_half = jittered_src.rowRange(jitter_y, rows, true);
+            
+            jittered_src.rowRange(rows - jitter_y, rows, false).copy(jittered_src_row_first_half);
+            jittered_src.rowRange(0, rows - jitter_y, false).copy(jittered_src_row_second_half);
+        }
+        else if(jitter_y > 0)
+        {
+            
+            /*
+             ---------------------
+             |                   | - 0
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1 - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - rows - 1 - jitter_y
+             |     first half    | - ...
+             |                   | - rows - 1
+             ---------------------
+             
+             --to--
+             
+             ---------------------
+             |                   | - 0
+             |     first half    | - ...
+             |                   | - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - jitter_y
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1
+             ---------------------
+             
+             */
+            
+            pkm::Mat jittered_src_row_first_half = jittered_src.rowRange(0, rows - jitter_y, true);
+            pkm::Mat jittered_src_row_second_half = jittered_src.rowRange(rows - jitter_y, rows, true);
+            
+            jittered_src.rowRange(0, jitter_y, false).copy(jittered_src_row_second_half);
+            jittered_src.rowRange(jitter_y, rows, false).copy(jittered_src_row_first_half);
+        }
+        
+        jittered_src.setTranspose();
+        jitter_y = jitter_x;
+
+        rows = jittered_src.rows;
+        if(jitter_y < 0)
+        {
+            /*
+             ---------------------
+             |                   | - 0
+             |     first half    | - ...
+             |                   | - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - jitter_y
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1
+             ---------------------
+             
+             --to--
+             
+             
+             ---------------------
+             |                   | - 0
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1 - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - rows - 1 - jitter_y
+             |     first half    | - ...
+             |                   | - rows - 1
+             ---------------------
+             
+             
+             */
+            
+            jitter_y = abs(jitter_y);
+            pkm::Mat jittered_src_row_first_half = jittered_src.rowRange(0, jitter_y, true);
+            pkm::Mat jittered_src_row_second_half = jittered_src.rowRange(jitter_y, rows, true);
+            
+            jittered_src.rowRange(rows - jitter_y, rows, false).copy(jittered_src_row_first_half);
+            jittered_src.rowRange(0, rows - jitter_y, false).copy(jittered_src_row_second_half);
+        }
+        else if(jitter_y > 0)
+        {
+            
+            /*
+             ---------------------
+             |                   | - 0
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1 - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - rows - 1 - jitter_y
+             |     first half    | - ...
+             |                   | - rows - 1
+             ---------------------
+             
+             --to--
+             
+             ---------------------
+             |                   | - 0
+             |     first half    | - ...
+             |                   | - jitter_y - 1
+             ---------------------
+             ---------------------
+             |                   | - jitter_y
+             |                   |
+             |                   |
+             |                   |
+             |       second      |
+             |        half       |
+             |                   |
+             |                   |
+             |                   |
+             |                   |
+             |                   | - rows - 1
+             ---------------------
+             
+             */
+            
+            pkm::Mat jittered_src_row_first_half = jittered_src.rowRange(0, rows - jitter_y, true);
+            pkm::Mat jittered_src_row_second_half = jittered_src.rowRange(rows - jitter_y, rows, true);
+            
+            jittered_src.rowRange(0, jitter_y, false).copy(jittered_src_row_second_half);
+            jittered_src.rowRange(jitter_y, rows, false).copy(jittered_src_row_first_half);
+        }
+        jittered_src.setTranspose();
+    }
+    
+    int getLayerNumberOfString(string layer_name)
+    {
+        vector<string> layer_names = getLayerNames();
+        for(int i = 0; i < layer_names.size(); i++)
+        {
+            if(layer_name == layer_names[i])
+                return i;
+        }
+        std::cerr << "Unknown layer name: " << layer_name << std::endl;
+        return -1;
+    }
+    
+    int getBlobNumberOfString(string blob_name)
+    {
+        vector<string> blob_names = getBlobNames();
+        for(int i = 0; i < blob_names.size(); i++)
+        {
+            if(blob_name == blob_names[i])
+                return i;
+        }
+        std::cerr << "Unknown blob name: " << blob_name << std::endl;
+        return -1;
+    }
+    
+    void makeStep(string layer_name = "inception_4c/output",
+                  float step_size = 1.5,
+                  int jitter = 32,
+                  float clip = 5.0,
+                  float l1 = 0.1,
+                  float l2 = 0.1,
+                  float grayscale_amount = 0.5,
+                  int neuronToMaximize = -1)
+    {
+        
+            
+        int layer_num = getLayerNumberOfString(layer_name);
+        boost::shared_ptr<Blob<float> > src_blob = net->blob_by_name("data");
+        int jitter_x, jitter_y;
+        if(jitter > 0)
+        {
+            jitter_x = rand() % (jitter * 2) - (jitter);
+            jitter_y = rand() % (jitter * 2) - (jitter);
+        
+            shiftImage(src_blob->mutable_cpu_data(), jitter_x, jitter_y,
+                       1,
+                       src_blob->channels(),
+                       src_blob->height(),
+                       src_blob->width());
+        }
+
+        // forward
+        net->ForwardTo(layer_num);
+        boost::shared_ptr<Blob<float> > dst_blob = net->blob_by_name(layer_name);
+        
+        if(neuronToMaximize >= 0 && neuronToMaximize < dst_blob->channels())
+        {
+            float *diff = dst_blob->mutable_cpu_diff();
+            float *data = dst_blob->mutable_cpu_data();
+            for(size_t n = 0; n < dst_blob->num(); n++)
+            {
+                for(size_t c = 0; c < dst_blob->channels(); c++)
+                {
+                    for(size_t h = 0; h < dst_blob->height(); h++)
+                    {
+                        for(size_t w = 0; w < dst_blob->width(); w++)
+                        {
+                            size_t idx = ((n * dst_blob->channels() + c) * dst_blob->height() + h) * dst_blob->width() + w;
+                            if(c != neuronToMaximize)
+                                diff[idx] = data[idx] * 0.01;
+                            else
+                                diff[idx] = data[idx] * 1.0;
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            
+            pkm::Mat dst_diff(dst_blob->num()*dst_blob->channels()*dst_blob->height(), dst_blob->width(), dst_blob->mutable_cpu_diff(), false);
+            pkm::Mat dst_data(dst_blob->num()*dst_blob->channels()*dst_blob->height(), dst_blob->width(), dst_blob->cpu_data());
+
+            
+            dst_diff.copy(dst_data);
+            pkm::Mat dst_data_abs = pkm::Mat::abs(dst_data);
+            dst_data_abs.clip(-clip, clip);
+            dst_data_abs.multiply(l1);
+            dst_diff.copy(dst_data_abs);
+            dst_data.clip(-clip, clip);
+            dst_data.multiply(-l2);
+            dst_diff.subtract(dst_data);
+        }
+        
+        // try to optimize
+        net->BackwardFrom(layer_num);
+        
+        // TODO: look at this. and change scaling on preprocess,deprocess!
+        // gradient ascent
+        size_t src_count = src_blob->num()*src_blob->channels()*src_blob->width()*src_blob->height();
+        pkm::Mat src_data(src_blob->num() * src_blob->channels(), src_blob->height()*src_blob->width(), src_blob->mutable_cpu_data(), false);
+        pkm::Mat src_diff(src_blob->num() * src_blob->channels(), src_blob->height()*src_blob->width(), src_blob->mutable_cpu_diff(), false);
+        pkm::Mat g(src_blob->num() * src_blob->channels(), src_blob->height()*src_blob->width(), src_blob->mutable_cpu_diff(), true);
+        float amt = step_size / pkm::Mat::mean(pkm::Mat::abs(src_diff));
+        cout << "amt: " << amt << endl;
+        src_diff.multiply(amt);
+        
+        if(grayscale_amount > 0)
+        {
+            pkm::Mat grayscale = src_diff.mean();
+            grayscale.push_back(grayscale.rowRange(0, 1, false));
+            grayscale.push_back(grayscale.rowRange(0, 1, false));
+            grayscale.multiply(grayscale_amount);
+            src_diff.multiply(1.0 - grayscale_amount);
+            grayscale.add(src_diff);
+            src_data.add(grayscale);
+        }
+        else {
+            src_data.add(src_diff);
+        }
+        
+        if(jitter > 0)
+        {
+            unShiftImage(src_blob->mutable_cpu_data(), jitter_x, jitter_y,
+                         1,
+                         src_blob->channels(),
+                         src_blob->height(),
+                         src_blob->width());
+        }
+        
+//        cv::Mat src_rgb(src_blob->height(), src_blob->width(), CV_32FC3);
+//        copyToOpenCV(src_blob, src_rgb);
+//        deprocess(src_rgb);
+//        cv::namedWindow("src_rgb");
+//        cv::imshow("src_rgb", src_rgb);
+//        cv::updateWindow("src_rgb");
+        
+        // clip
+        if(true)
+        {
+            cv::Scalar mean_scalar;
+            mean_scalar[2] = 104.0;
+            mean_scalar[1] = 116.0;
+            mean_scalar[0] = 122.0;
+            for(int c = 0; c < 3; c++)
+            {
+                pkm::Mat src_data_by_channel(1,
+                                             src_blob->width()*src_blob->height(),
+                                             src_blob->mutable_cpu_data() + c*src_blob->width()*src_blob->height(),
+                                             false);
+                src_data_by_channel.clip(-mean_scalar[c], 255.0 - mean_scalar[c]);
+            }
+        }
+        else
+        {
+            float bias = pkm::Mat::mean(src_data);
+            src_data.clip(-bias, 255.0 - bias);
+        }
+    }
+    
+    void test(cv::Mat& src)
+    {
+        cv::namedWindow("og");
+        cv::imshow("og", src);
+        preprocess(src);
+        cv::namedWindow("og-pre");
+        cv::imshow("og-pre", src);
+        int h = src.rows;
+        int w = src.cols;
+        boost::shared_ptr<Blob<float> > src_blob = net->blob_by_name("data");
+        src_blob->Reshape(1, 3, h, w);
+        copyToCaffeBlob(src, src_blob);
+        cv::Mat dst = cv::Mat(h, w, CV_32FC3, cvScalar(0.));
+        copyToOpenCV(src_blob, dst);
+        cv::namedWindow("dst");
+        cv::imshow("dst", dst);
+        deprocess(dst);
+        cv::namedWindow("dst-post");
+        cv::imshow("dst-post", dst);
+        
+    }
+    
+    void drawAmplification(int x, int y, int w, int h)
+    {
+        mutex.lock();
+        if(vis.cols == 0 || vis.rows == 0)
+        {
+            mutex.unlock();
+        }
+        else
+        {
+            if(currentIteration.getWidth() != w || currentIteration.getHeight() != h)
+                currentIteration.allocate(w, h);
+            cv::resize(vis, cv::Mat(currentIteration.getCvImage()), cv::Size(w, h));
+            currentIteration.flagImageChanged();
+            currentIteration.draw(x, y, w, h);
+            mutex.unlock();
+        }
+        
+    }
+
+    
+    void amplifyLayer(cv::Mat& src_rgb,            // unotuched RGB image
+                      cv::Mat& dst_rgb,
+                      string layer_name = "inception_4c/output",
+                      float l1 = 0.1,
+                      float l2 = 0.1,
+                      float step_size = 1.5,
+                      int num_octaves = 4,
+                      float octave_scale = 1.4,
+                      float clip = 5.0,
+                      int jitter = 32,
+                      int num_iterations = 1,
+                      bool visualize_iterations = true,
+                      float grayscale_amount = 0.5,
+                      int neuron_to_maximize = -1)
+    {
+        preprocess(src_rgb);
+        
+        vector<cv::Mat> octaves;
+        for(int scale_i = num_octaves - 1; scale_i >= 0; scale_i--)
+        {
+            cv::Mat current_scale;
+            int new_width = src_rgb.cols / powf(octave_scale, scale_i);
+            int new_height = src_rgb.rows / powf(octave_scale, scale_i);
+            cv::resize(src_rgb, current_scale, cv::Size(new_width, new_height));
+            octaves.push_back(current_scale);
+        }
+        
+        cv::Mat detail = cv::Mat(octaves.front().rows, octaves.front().cols, CV_32FC3, cvScalar(0.));
+        
+        for(int octave_i = 0; octave_i < octaves.size(); octave_i++)
+        {
+            int h = octaves[octave_i].rows;
+            int w = octaves[octave_i].cols;
+            if(octave_i > 0)
+            {
+                cv::resize(detail, detail, cv::Size(w, h));
+            }
+            cout << "octave: " << octave_i << " (" << w << "x" << h << ")" << endl;
+            
+            cv::Mat combined = octaves[octave_i] + detail;
+            
+            net->blob_by_name("data")->Reshape(1, 3, h, w);
+            copyToCaffeBlob(combined, net->blob_by_name("data"));
+            
+            for(int iter_i = 0; iter_i < num_iterations; iter_i++)
+            {
+                makeStep(layer_name, step_size, jitter, clip, l1, l2, grayscale_amount, neuron_to_maximize);
+                
+                if(visualize_iterations)
+                {
+                    mutex.lock();
+                    vis = cv::Mat(h, w, CV_32FC3, cvScalar(0.));
+                    copyToOpenCV(net->blob_by_name("data"), vis);
+                    deprocess(vis);
+                    mutex.unlock();
+                }
+            }
+            
+            cv::Mat this_iteration = cv::Mat(h, w, CV_32FC3, cvScalar(0.));
+            copyToOpenCV(net->blob_by_name("data"), this_iteration);
+            detail = this_iteration - octaves[octave_i];
+        }
+        
+        cv::Mat final = cv::Mat(dst_rgb.rows, dst_rgb.cols, CV_32FC3, cvScalar(0.));
+        copyToOpenCV(net->blob_by_name("data"), final);
+        deprocess(final);
+        final.copyTo(dst_rgb);
+        
+//        cv::namedWindow("src_rgb");
+//        cv::imshow("src_rgb", src_rgb);
+//        cv::namedWindow("dst_rgb");
+//        cv::imshow("dst_rgb", dst_rgb);
     }
     
     const vector<Blob<float>*>& forwardArbitrarySizeToMeanSize(cv::Mat &img)
@@ -1045,6 +1815,10 @@ private:
     
     // dense detection (8x8)
     ofxCvFloatImage dense_grid;
+    ofxCvColorImage currentIteration;
+    cv::Mat vis;
+    
+    std::mutex mutex;
     
     // for drawing layers
     vector<std::shared_ptr<ofxCvColorImage> > net_layer_imgs;
