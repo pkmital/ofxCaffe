@@ -956,8 +956,8 @@ public:
         int jitter_x, jitter_y;
         if(jitter > 0)
         {
-            jitter_x = rand() % (jitter * 2) - (jitter);
-            jitter_y = rand() % (jitter * 2) - (jitter);
+            jitter_x = std::min<int>(src_blob->width() - 1, rand() % (jitter * 2) - (jitter));
+            jitter_y = std::min<int>(src_blob->height() - 1, rand() % (jitter * 2) - (jitter));
         
             shiftImage(src_blob->mutable_cpu_data(), jitter_x, jitter_y,
                        1,

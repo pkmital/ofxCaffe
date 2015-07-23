@@ -1,48 +1,17 @@
-/*
- 
- ofxCaffe - testApp.h
- 
- The MIT License (MIT)
- 
- Copyright (c) 2015 Parag K. Mital, http://pkmital.com
- 
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
- 
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
- 
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
- 
- 
- */
-
 #pragma once
-
-//#define DO_LOAD_VIDEO 1
-#define DO_LOAD_SYPHON 1
-//#define DO_LOAD_CAMERA 1
 
 #include "ofMain.h"
 #include "ofxOpenCv.h"
 #include "ofxGui.h"
 #include "ofxCaffe.hpp"
+
+#ifdef WITH_DENOISING
 #include "adaptive_manifold_filter.hpp"
+#endif
 
-
-class synthesisThread : public ofThread {
+class pkmDeepDream : public ofThread {
 public:
-    synthesisThread()
+    pkmDeepDream()
     {
         b_initialized = false;
         b_mutex = false;
@@ -64,7 +33,7 @@ public:
         gui.add(iterations.setup("Iterations", 5, 0, 20));
         gui.add(l1_norm.setup("L1 Norm", 0.1, 0.0, 1.0));
         gui.add(l2_norm.setup("L2 Norm", 0.1, 0.0, 1.0));
-        gui.add(stepsize.setup("Step Size", 5.5, 0.0, 10.0));
+        gui.add(stepsize.setup("Step Size", 4.5, 0.0, 10.0));
         gui.add(interp.setup("Input Mix", 0.1, 0.0, 1.0));
         gui.add(zoom.setup("Zoom", 1.00, 0.0, 2.0));
         gui.add(rotation.setup("Rotation", 0.0, 0.0, 360.0));
@@ -75,18 +44,18 @@ public:
         gui.add(grayscale_amount.setup("Grayscale", 0.5, 0.0, 1.0));
         gui.add(jitter.setup("Jitter", 32, 0, 128));
         gui.add(neuron.setup("Neuron", -1, 0, caffe->getNumberOfNeurons(caffe->getBlobNames()[layer])));
+#ifdef WITH_DENOISING
         gui.add(b_filter.setup("Filter", false));
-        
         filter = cv::AdaptiveManifoldFilter::create();
         filter->set("sigma_s", 4.0);
         filter->set("sigma_r", 0.15);
         filter->set("tree_height", -1);
         filter->set("num_pca_iterations", 1);
-        
+#endif
         startThread(true);
     }
     
-    ~synthesisThread()
+    ~pkmDeepDream()
     {
         waitForThread(true);
     }
@@ -103,12 +72,13 @@ public:
     {
         if(!b_initialized)
         {
+#ifdef WITH_DENOISING
             if(b_filter)
             {
                 cv::Mat dst, tilde_dst, joint_img;
                 filter->apply(src_rgb, src_rgb, tilde_dst, joint_img);
             }
-            
+#endif
             cv::Mat combined_img = dst_rgb * interp + src_rgb * (1.0 - interp);
             combined_img.copyTo(this->src_rgb);
             b_initialized = true;
@@ -135,17 +105,17 @@ public:
         
         gui.draw();
         
-//        ofDrawBitmapStringHighlight("model (-/+):  " + caffe->getModelTypeNames()[current_model], 20, h - 70);
+        //        ofDrawBitmapStringHighlight("model (-/+):  " + caffe->getModelTypeNames()[current_model], 20, h - 70);
         
         ofDisableAlphaBlending();
-//        if (b_1)
-//            caffe->drawLabelAt(20, h - 50);
+        //        if (b_1)
+        //            caffe->drawLabelAt(20, h - 50);
         if (b_2)
             caffe->drawLayerXParams(0, 80, w, 32, layer_num, ofGetElapsedTimef() * 10.0);
         if (b_3)
             caffe->drawLayerXOutput(0, 420, w, 32, layer_num);
-//        if (b_4)
-//            caffe->drawProbabilities(0, 500, w, 200);
+        //        if (b_4)
+        //            caffe->drawProbabilities(0, 500, w, 200);
     }
     
     void keyPressed(int key)
@@ -227,10 +197,11 @@ protected:
     
     std::mutex mutex;
     
+#ifdef WITH_DENOISING
     //--------------------------------------------------------------
     // Denoising
     cv::Ptr<cv::AdaptiveManifoldFilter>   filter;
-    
+#endif
     //--------------------------------------------------------------
     // simple flags for switching on drawing options of camera image/layers/parameters/probabilities
     bool b_0, b_1, b_2, b_3, b_4;
@@ -263,61 +234,8 @@ protected:
     ofxFloatSlider gradient_clip;
     ofxIntSlider jitter;
     ofxIntSlider neuron;
+#ifdef WITH_DENOISING
     ofxToggle b_filter;
-    
+#endif
     bool b_initialized;
-};
-
-#include "ofxSyphonClient.h"
-
-class testApp : public ofBaseApp{
-
-public:
-    //--------------------------------------------------------------
-    void setup();
-    void update();
-    void draw();
-    
-    //--------------------------------------------------------------
-    void keyPressed(int key);
-    void keyReleased(int key);
-    void mouseMoved(int x, int y );
-    void mouseDragged(int x, int y, int button);
-    void mousePressed(int x, int y, int button);
-    void mouseReleased(int x, int y, int button);
-    void windowResized(int w, int h);
-    void dragEvent(ofDragInfo dragInfo);
-    void gotMessage(ofMessage msg);
-	
-    //--------------------------------------------------------------
-    // camera and opencv image objects
-#ifdef DO_LOAD_VIDEO
-    ofVideoPlayer video;
-    int current_frame, total_frames;
-#else
-#ifdef DO_LOAD_SYPHON
-    ofxSyphonClient syphon;
-    ofFbo fbo;
-    ofPixels pixels;
-#else
-    ofVideoGrabber camera;
-#endif
-#endif
-    
-    ofxCvColorImage camera_img, camera_img_rsz, synthesis_img;
-    ofxCvGrayscaleImage synthesis_h, synthesis_s, synthesis_v;
-    
-    //--------------------------------------------------------------
-    // ptr to caffe obj
-    synthesisThread caffe;
-    
-    //--------------------------------------------------------------
-    // image and window dimensions
-    int width, height;
-    int width_og, height_og;
-    
-    //--------------------------------------------------------------
-    // hacky mutex for when changing caffe model
-    bool b_setup;
-    
 };
